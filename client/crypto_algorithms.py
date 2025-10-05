@@ -1,25 +1,35 @@
 # -*- coding: utf-8 -*-
 import math
+
+# ====== GENEL AYARLAR ======
+def safe_char(c):
+    """Türkçe karakterleri bozmadan geri döndürür"""
+    turkish_chars = "çğıöşüÇĞİÖŞÜ"
+    return c if c in turkish_chars else None
+
+def normalize_text(text):
+    """Türkçe karakterleri ASCII eşdeğerine dönüştürür"""
+    mapping = str.maketrans("ığüşöçİĞÜŞÖÇ", "igusocIGUSOC")
+    return text.translate(mapping)
+
+
 # ====== SEZAR ŞİFRELEME ======
 def caesar_encrypt(text, shift):
     result = ""
     for char in text:
-        if char.isalpha():
+        if safe_char(char):
+            result += char
+        elif char.isalpha():
             base = 'A' if char.isupper() else 'a'
             result += chr((ord(char) - ord(base) + shift) % 26 + ord(base))
         else:
             result += char
     return result
 
+
 def caesar_decrypt(cipher, shift):
     return caesar_encrypt(cipher, -shift)
 
-
-# ====== VIGENERE ŞİFRELEME ======
-# Türkçe karakter dönüşüm tablosu
-def normalize_text(text):
-    mapping = str.maketrans("ığüşöçİĞÜŞÖÇ", "igusocIGUSOC")
-    return text.translate(mapping)
 
 # ====== VIGENERE ŞİFRELEME ======
 def vigenere_encrypt(text, key):
@@ -29,7 +39,9 @@ def vigenere_encrypt(text, key):
     key_index = 0
 
     for char in text:
-        if char.isalpha():
+        if safe_char(char):
+            result += char
+        elif char.isalpha():
             shift = ord(key[key_index % len(key)]) - ord('a')
             base = ord('A') if char.isupper() else ord('a')
             result += chr((ord(char) - base + shift) % 26 + base)
@@ -46,7 +58,9 @@ def vigenere_decrypt(cipher, key):
     key_index = 0
 
     for char in cipher:
-        if char.isalpha():
+        if safe_char(char):
+            result += char
+        elif char.isalpha():
             shift = ord(key[key_index % len(key)]) - ord('a')
             base = ord('A') if char.isupper() else ord('a')
             result += chr((ord(char) - base - shift) % 26 + base)
@@ -55,15 +69,19 @@ def vigenere_decrypt(cipher, key):
             result += char
     return result
 
+
 # ====== SUBSTITUTION ŞİFRELEME ======
 def substitution_encrypt(text, key_map):
     result = ""
     for char in text.lower():
-        if char in key_map:
+        if safe_char(char):
+            result += char
+        elif char in key_map:
             result += key_map[char]
         else:
             result += char
     return result
+
 
 def substitution_decrypt(cipher, key_map):
     rev_map = {v: k for k, v in key_map.items()}
@@ -72,13 +90,14 @@ def substitution_decrypt(cipher, key_map):
 
 # ====== AFFINE ŞİFRELEME ======
 def affine_encrypt(text, a, b):
-    # a ile 26 aralarında asal mı kontrol et
     if math.gcd(a, 26) != 1:
         raise ValueError("a değeri 26 ile aralarında asal olmalı (örnek: 3, 5, 7, 9, 11...)")
 
     result = ""
     for char in text:
-        if char.isalpha():
+        if safe_char(char):
+            result += char
+        elif char.isalpha():
             base = 'A' if char.isupper() else 'a'
             result += chr(((a * (ord(char) - ord(base)) + b) % 26) + ord(base))
         else:
@@ -92,14 +111,16 @@ def affine_decrypt(cipher, a, b):
 
     result = ""
     try:
-        a_inv = pow(a, -1, 26)  # mod 26'da tersini bul
+        a_inv = pow(a, -1, 26)
     except ValueError:
         raise ValueError("a değeri için mod ters hesaplanamadı — 26 ile aralarında asal olduğuna emin ol.")
 
     for char in cipher:
-        if char.isalpha():
+        if safe_char(char):
+            result += char
+        elif char.isalpha():
             base = 'A' if char.isupper() else 'a'
-            result += chr(((a_inv * ((ord(char) - ord(base) - b)) % 26) + ord(base)))
+            result += chr((a_inv * ((ord(char) - ord(base) - b)) % 26) + ord(base))
         else:
             result += char
     return result

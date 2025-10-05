@@ -10,18 +10,18 @@
     <h1 class="title">🖥️ Kriptoloji Sunucu Paneli</h1>
 
     {% if not started %}
+      <!-- 🌐 Server Başlatma -->
       <div class="form-card">
-        <form method="post">
+        <h3>🌐 Server Başlat</h3>
+        <form id="startServerForm" method="POST">
           <div class="field">
             <label>IP Adresi:</label>
-            <input type="text" name="ip" value="127.0.0.1" required>
+            <input type="text" id="serverIP" name="ip" placeholder="örn: 192.168.1.170" required>
           </div>
-
           <div class="field">
             <label>Port:</label>
-            <input type="number" name="port" value="6000" required>
+            <input type="number" id="serverPort" name="port" placeholder="örn: 6000" required>
           </div>
-
           <button type="submit" class="btn-send">🚀 Server Başlat</button>
         </form>
       </div>
@@ -30,77 +30,108 @@
         <p><strong>Server çalışıyor:</strong> {{ ip }} : {{ port }}</p>
       </div>
 
+      <!-- 📤 Client’a Mesaj Gönder -->
       <div class="form-card">
         <h3>📤 Client’a Mesaj Gönder</h3>
         <form id="sendForm">
-          <input type="text" name="ip" value="127.0.0.1" hidden>
-          <input type="number" name="port" value="6001" hidden>
-          <input type="text" name="message" placeholder="Gönderilecek mesaj..." required>
+          <div class="field">
+            <label>Client IP:</label>
+            <input type="text" name="ip" id="clientIP" placeholder="örn: 192.168.1.189" required>
+          </div>
+          <div class="field">
+            <label>Client Port:</label>
+            <input type="number" name="port" id="clientPort" placeholder="örn: 6001" required>
+          </div>
+          <div class="field">
+            <label>Şifreleme Türü:</label>
+            <select name="algorithm" id="algorithmSelect">
+              <option value="caesar">Sezar</option>
+              <option value="vigenere">Vigenere</option>
+              <option value="substitution">Substitution</option>
+              <option value="affine">Affine</option>
+            </select>
+          </div>
+          <div class="field">
+            <input type="text" name="message" id="messageInput" placeholder="Gönderilecek mesaj..." required>
+          </div>
           <button type="submit" class="btn-send">📡 Gönder</button>
         </form>
       </div>
 
+      <!-- 🕓 Mesaj Geçmişi -->
       <div class="history-section">
         <div class="history-header">
           <h3>📥 Mesaj Geçmişi</h3>
           <button id="clearBtn" class="btn-clear">🧹 Temizle</button>
         </div>
-
         <div class="history-box" id="messageBox"></div>
       </div>
     {% endif %}
   </div>
 
   <script>
-    // 🔹 Mesajları periyodik olarak yükle (flicker engelli)
+    // === Server Başlatma ===
+    document.getElementById("startServerForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = document.getElementById("startServerForm");
+      const data = new FormData(form);
+
+      const res = await fetch("/start_server", { method: "POST", body: data });
+      const result = await res.json();
+
+      if (result.success) {
+        alert("✅ Server başarıyla başlatıldı!");
+        location.reload();
+      } else {
+        alert("❌ Server başlatılamadı: " + (result.error || "Bilinmeyen hata"));
+      }
+    });
+
+    // === Mesaj Gönder ===
+    document.getElementById("sendForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = document.getElementById("sendForm");
+      const data = new FormData(form);
+
+      const res = await fetch("/send", { method: "POST", body: data });
+      const result = await res.json();
+
+      if (result.success) {
+        alert("✅ Mesaj şifrelenip gönderildi!");
+      } else {
+        alert("❌ Gönderim hatası! Client dinliyor mu kontrol edin.");
+      }
+    });
+
+    // === Mesaj Geçmişi Yükleme ===
     async function loadMessages() {
       const res = await fetch("/messages");
       const data = await res.json();
       const box = document.getElementById("messageBox");
       if (!box) return;
-
-      // Mevcut mesajları kontrol et, sadece yenileri ekle
-      const existing = Array.from(box.querySelectorAll(".message")).map(m => m.textContent);
+      box.innerHTML = "";
       data.forEach(msg => {
-        const content = `${msg.direction}-${msg.algorithm}-${msg.encrypted}-${msg.decrypted}`;
-        if (!existing.includes(content)) {
-          const div = document.createElement("div");
-          div.classList.add("message");
-          const dir = msg.direction === "Client → Server" ? "🟢" : "🔵";
-          div.innerHTML = `
-            <strong>${dir} ${msg.direction}</strong><br>
-            <small>Algoritma:</small> ${msg.algorithm}<br>
-            <small>Şifreli:</small> ${msg.encrypted}<br>
-            <small>Çözülmüş:</small> <span class="dec">${msg.decrypted}</span>
-          `;
-          box.appendChild(div);
-          box.scrollTop = box.scrollHeight;
-        }
+        const div = document.createElement("div");
+        div.classList.add("message");
+        const dir = msg.direction === "Client → Server" ? "🟢" : "🔵";
+        div.innerHTML = `
+          <strong>${dir} ${msg.direction}</strong><br>
+          <small>Algoritma:</small> ${msg.algorithm}<br>
+          <small>Şifreli:</small> ${msg.encrypted}<br>
+          <small>Çözülmüş:</small> <span class="dec">${msg.decrypted}</span>
+        `;
+        box.appendChild(div);
       });
+      box.scrollTop = box.scrollHeight;
     }
 
-    // 🔹 Mesaj geçmişini temizle
-    async function clearMessages() {
+    // === Geçmişi Temizle ===
+    document.getElementById("clearBtn")?.addEventListener("click", async () => {
       await fetch("/clear", { method: "POST" });
       document.getElementById("messageBox").innerHTML = "";
-    }
+    });
 
-    // 🔹 Client'a mesaj gönder
-    async function sendMessage(e) {
-      e.preventDefault();
-      const form = document.getElementById("sendForm");
-      const data = new FormData(form);
-      const res = await fetch("/send", { method: "POST", body: data });
-      const result = await res.json();
-      alert(result.success ? "📨 Mesaj gönderildi!" : "❌ Gönderim hatası!");
-    }
-
-    // 🔹 Event listener'lar
-    document.getElementById("clearBtn")?.addEventListener("click", clearMessages);
-    document.getElementById("sendForm")?.addEventListener("submit", sendMessage);
-
-    // 🔹 Otomatik güncelleme (5 saniyede bir)
-    setInterval(loadMessages, 5000);
+    setInterval(loadMessages, 2000);
     loadMessages();
   </script>
 </body>
