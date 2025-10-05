@@ -9,25 +9,43 @@
   <div class="container">
     <h1 class="title">🔐 Kriptoloji İletişim Paneli</h1>
 
+    <!-- 🌐 IP & Port Ayarları -->
+    <div class="form-card">
+      <h3>🌐 IP & Port Ayarları</h3>
+      <div class="field">
+        <label>IP Adresi:</label>
+        <input type="text" id="configIP" value="{{ ip or '' }}" placeholder="örn: 192.168.1.10">
+      </div>
+      <div class="field">
+        <label>Port:</label>
+        <input type="number" id="configPort" value="{{ port or '6001' }}" placeholder="örn: 6001">
+      </div>
+      <div class="btn-group">
+        <button class="btn-send" onclick="updateConfig()">💾 Kaydet ve Dinlemeyi Başlat</button>
+        <button class="btn-auto" onclick="autoDetectIP()">🌐 IP’mi Otomatik Bul</button>
+      </div>
+    </div>
+
+    <!-- 📤 Mesaj Gönderme Formu -->
     <div class="form-card">
       <form method="post">
         <div class="field">
           <label>Sunucu IP:</label>
-          <input type="text" name="ip" value="127.0.0.1" required>
+          <input type="text" name="ip" id="serverIP" value="127.0.0.1" required>
         </div>
 
         <div class="field">
           <label>Port:</label>
-          <input type="number" name="port" value="6000" required>
+          <input type="number" name="port" id="serverPort" value="6000" required>
         </div>
 
         <div class="field">
           <label>Şifreleme Türü:</label>
           <select name="algorithm" id="algorithmSelect" required>
-            <option value="caesar">Sezar</option>
-            <option value="vigenere">Vigenere</option>
-            <option value="substitution">Substitution</option>
-            <option value="affine">Affine</option>
+            <option value="caesar" {% if selected_algorithm == "caesar" %}selected{% endif %}>Sezar</option>
+            <option value="vigenere" {% if selected_algorithm == "vigenere" %}selected{% endif %}>Vigenere</option>
+            <option value="substitution" {% if selected_algorithm == "substitution" %}selected{% endif %}>Substitution</option>
+            <option value="affine" {% if selected_algorithm == "affine" %}selected{% endif %}>Affine</option>
           </select>
         </div>
 
@@ -42,6 +60,7 @@
       </form>
     </div>
 
+    <!-- 🔓 Sunucu Yanıtı -->
     {% if response %}
       <div class="response-card">
         <h3>🔓 Sunucu Yanıtı</h3>
@@ -49,6 +68,7 @@
       </div>
     {% endif %}
 
+    <!-- 📥 Gelen Mesajlar -->
     <div class="history-section">
       <div class="history-header">
         <h3>📥 Sunucudan Gelen Mesajlar</h3>
@@ -60,6 +80,7 @@
   </div>
 
   <script>
+    // === Şifreleme türüne göre ek alanlar ===
     const select = document.getElementById("algorithmSelect");
     const extraFields = document.getElementById("extraFields");
     const incomingBox = document.getElementById("incomingBox");
@@ -74,17 +95,18 @@
       } else if (value === "affine") {
         extraFields.innerHTML = '<div class="field"><label>a:</label><input type="number" name="a" value="5"></div><div class="field"><label>b:</label><input type="number" name="b" value="8"></div>';
       } else if (value === "substitution") {
-        extraFields.innerHTML = '<small class="note">Sabit Substitution anahtarı kullanılacak.</small>';
+        extraFields.innerHTML = '<small class="note">🔒 Sabit Substitution anahtarı kullanılacak.</small>';
       }
     }
     select.addEventListener("change", updateExtraFields);
     updateExtraFields();
 
+    // === Mesaj geçmişini yükle ===
     async function loadIncoming() {
       const res = await fetch("/incoming");
       const data = await res.json();
       incomingBox.innerHTML = "";
-      data.slice(-10).forEach(msg => { // sadece son 10 mesajı göster
+      data.slice(-10).forEach(msg => {
         const div = document.createElement("div");
         div.classList.add("message");
         div.textContent = msg;
@@ -92,9 +114,37 @@
       });
     }
 
+    // === Geçmiş temizleme ===
     async function clearMessages() {
       await fetch("/clear", { method: "POST" });
       incomingBox.innerHTML = "";
+    }
+
+    // === IP/Port kaydet ===
+    async function updateConfig() {
+      const ip = document.getElementById("configIP").value;
+      const port = document.getElementById("configPort").value;
+
+      if (!ip || !port) {
+        alert("⚠️ Lütfen geçerli bir IP ve Port girin!");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("ip", ip);
+      formData.append("port", port);
+
+      const res = await fetch("/update_config", { method: "POST", body: formData });
+      const data = await res.json();
+      alert(`✅ Dinleme ayarları güncellendi:\n${data.ip}:${data.port}`);
+    }
+
+    // === IP otomatik algılama ===
+    async function autoDetectIP() {
+      const res = await fetch("https://api.ipify.org?format=json");
+      const data = await res.json();
+      document.getElementById("configIP").value = data.ip;
+      alert(`🌐 IP adresiniz algılandı: ${data.ip}`);
     }
 
     document.getElementById("clearBtn").addEventListener("click", clearMessages);
