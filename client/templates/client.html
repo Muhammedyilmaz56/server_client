@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>🔐 KriptoClient</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">🔐 Kriptoloji İletişim Paneli</h1>
+
+    <div class="form-card">
+      <form method="post">
+        <div class="field">
+          <label>Sunucu IP:</label>
+          <input type="text" name="ip" value="127.0.0.1" required>
+        </div>
+
+        <div class="field">
+          <label>Port:</label>
+          <input type="number" name="port" value="6000" required>
+        </div>
+
+        <div class="field">
+          <label>Şifreleme Türü:</label>
+          <select name="algorithm" id="algorithmSelect" required>
+            <option value="caesar">Sezar</option>
+            <option value="vigenere">Vigenere</option>
+            <option value="substitution">Substitution</option>
+            <option value="affine">Affine</option>
+          </select>
+        </div>
+
+        <div id="extraFields"></div>
+
+        <div class="field">
+          <label>Mesajınız:</label>
+          <input type="text" name="message" placeholder="Gönderilecek metin..." required>
+        </div>
+
+        <button type="submit" class="btn-send">📡 Gönder</button>
+      </form>
+    </div>
+
+    {% if response %}
+      <div class="response-card">
+        <h3>🔓 Sunucu Yanıtı</h3>
+        <p>{{ response }}</p>
+      </div>
+    {% endif %}
+
+    <div class="history-section">
+      <div class="history-header">
+        <h3>📥 Sunucudan Gelen Mesajlar</h3>
+        <button id="clearBtn" class="btn-clear">🧹 Temizle</button>
+      </div>
+
+      <div class="history-box" id="incomingBox"></div>
+    </div>
+  </div>
+
+  <script>
+    const select = document.getElementById("algorithmSelect");
+    const extraFields = document.getElementById("extraFields");
+    const incomingBox = document.getElementById("incomingBox");
+
+    function updateExtraFields() {
+      const value = select.value;
+      extraFields.innerHTML = "";
+      if (value === "caesar") {
+        extraFields.innerHTML = '<div class="field"><label>Shift:</label><input type="number" name="shift" value="3"></div>';
+      } else if (value === "vigenere") {
+        extraFields.innerHTML = '<div class="field"><label>Anahtar:</label><input type="text" name="key" value="anahtar"></div>';
+      } else if (value === "affine") {
+        extraFields.innerHTML = '<div class="field"><label>a:</label><input type="number" name="a" value="5"></div><div class="field"><label>b:</label><input type="number" name="b" value="8"></div>';
+      } else if (value === "substitution") {
+        extraFields.innerHTML = '<small class="note">Sabit Substitution anahtarı kullanılacak.</small>';
+      }
+    }
+    select.addEventListener("change", updateExtraFields);
+    updateExtraFields();
+
+    async function loadIncoming() {
+      const res = await fetch("/incoming");
+      const data = await res.json();
+      incomingBox.innerHTML = "";
+      data.slice(-10).forEach(msg => { // sadece son 10 mesajı göster
+        const div = document.createElement("div");
+        div.classList.add("message");
+        div.textContent = msg;
+        incomingBox.appendChild(div);
+      });
+    }
+
+    async function clearMessages() {
+      await fetch("/clear", { method: "POST" });
+      incomingBox.innerHTML = "";
+    }
+
+    document.getElementById("clearBtn").addEventListener("click", clearMessages);
+    setInterval(loadIncoming, 2000);
+    loadIncoming();
+  </script>
+</body>
+</html>

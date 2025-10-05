@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>🔐 KriptoServer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">🖥️ Kriptoloji Sunucu Paneli</h1>
+
+    {% if not started %}
+      <div class="form-card">
+        <form method="post">
+          <div class="field">
+            <label>IP Adresi:</label>
+            <input type="text" name="ip" value="127.0.0.1" required>
+          </div>
+
+          <div class="field">
+            <label>Port:</label>
+            <input type="number" name="port" value="6000" required>
+          </div>
+
+          <button type="submit" class="btn-send">🚀 Server Başlat</button>
+        </form>
+      </div>
+    {% else %}
+      <div class="info-card">
+        <p><strong>Server çalışıyor:</strong> {{ ip }} : {{ port }}</p>
+      </div>
+
+      <div class="form-card">
+        <h3>📤 Client’a Mesaj Gönder</h3>
+        <form id="sendForm">
+          <input type="text" name="ip" value="127.0.0.1" hidden>
+          <input type="number" name="port" value="6001" hidden>
+          <input type="text" name="message" placeholder="Gönderilecek mesaj..." required>
+          <button type="submit" class="btn-send">📡 Gönder</button>
+        </form>
+      </div>
+
+      <div class="history-section">
+        <div class="history-header">
+          <h3>📥 Mesaj Geçmişi</h3>
+          <button id="clearBtn" class="btn-clear">🧹 Temizle</button>
+        </div>
+
+        <div class="history-box" id="messageBox"></div>
+      </div>
+    {% endif %}
+  </div>
+
+  <script>
+    async function loadMessages() {
+      const res = await fetch("/messages");
+      const data = await res.json();
+      const box = document.getElementById("messageBox");
+      if (!box) return;
+      box.innerHTML = "";
+      data.forEach(msg => {
+        const div = document.createElement("div");
+        div.classList.add("message");
+        const dir = msg.direction === "Client → Server" ? "🟢" : "🔵";
+        div.innerHTML = `
+          <strong>${dir} ${msg.direction}</strong><br>
+          <small>Algoritma:</small> ${msg.algorithm}<br>
+          <small>Şifreli:</small> ${msg.encrypted}<br>
+          <small>Çözülmüş:</small> <span class="dec">${msg.decrypted}</span>
+        `;
+        box.appendChild(div);
+      });
+    }
+
+    async function clearMessages() {
+      await fetch("/clear", { method: "POST" });
+      document.getElementById("messageBox").innerHTML = "";
+    }
+
+    async function sendMessage(e) {
+      e.preventDefault();
+      const form = document.getElementById("sendForm");
+      const data = new FormData(form);
+      const res = await fetch("/send", { method: "POST", body: data });
+      const result = await res.json();
+      alert(result.success ? "Mesaj gönderildi!" : "Gönderim hatası!");
+    }
+
+    document.getElementById("clearBtn")?.addEventListener("click", clearMessages);
+    document.getElementById("sendForm")?.addEventListener("submit", sendMessage);
+    setInterval(loadMessages, 2000);
+    loadMessages();
+  </script>
+</body>
+</html>
