@@ -1,124 +1,200 @@
 body {
-    font-family: 'Courier New', monospace;
-    background: radial-gradient(circle at center, #000 0%, #020202 100%);
-    color: #00ffcc;
-    text-align: center;
-    margin: 0;
-    padding: 0;
-  }
-  
-  .title {
-    color: #00ffcc;
-    text-shadow: 0 0 15px #00ffcc;
-    margin-top: 20px;
-    font-size: 28px;
-    letter-spacing: 2px;
-  }
-  
-  .container {
-    width: 90%;
-    max-width: 700px;
-    margin: 30px auto;
-    padding: 20px;
-    border: 2px solid #00ffcc;
-    border-radius: 15px;
-    box-shadow: 0 0 25px #00ffcc55;
-    background: rgba(0, 10, 10, 0.8);
-  }
-  
-  .form-card, .response-card, .history-section {
-    background: rgba(0, 20, 20, 0.6);
-    border: 1px solid #00ffcc55;
-    border-radius: 10px;
-    padding: 15px;
-    margin-top: 15px;
-    box-shadow: 0 0 10px #00ffcc33;
-  }
-  
-  .field {
-    margin: 10px 0;
-  }
-  
-  label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    text-align: left;
-  }
-  
-  input, select {
-    width: 95%;
-    padding: 8px;
-    border: 1px solid #00ffcc;
-    border-radius: 6px;
-    background: #001a1a;
-    color: #00ffcc;
-    font-family: inherit;
-  }
-  
-  input:focus, select:focus {
-    outline: none;
-    box-shadow: 0 0 8px #00ffcc;
-  }
-  
-  .btn-send, .btn-clear {
-    margin-top: 10px;
-    padding: 10px 20px;
-    font-size: 15px;
-    border: none;
-    border-radius: 6px;
-    background: #00ffcc;
-    color: #001010;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.2s;
-  }
-  .btn-send:hover { background: #00ffaa; }
-  .btn-clear {
-    background: #ff0066;
-    color: white;
-    float: right;
-  }
-  .btn-clear:hover { background: #ff3388; }
-  
-  .history-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .history-box {
-    margin-top: 10px;
-    height: 250px;
-    overflow-y: auto;
-    background: #000;
-    border: 1px solid #00ffcc33;
-    border-radius: 8px;
-    padding: 10px;
-    text-align: left;
-    box-shadow: inset 0 0 10px #00ffcc33;
-  }
-  
-  .message {
-    background: rgba(0, 255, 204, 0.1);
-    border-left: 3px solid #00ffcc;
-    padding: 6px 8px;
-    margin: 6px 0;
-    border-radius: 5px;
-    animation: fadeIn 0.4s ease-in-out;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  .note {
-    color: #80ffe0;
-    font-size: 13px;
-  }
-  .dec {
-    color: #80ffb3;
-    font-weight: bold;
-  }
-  
+  font-family: 'Courier New', monospace;
+  background: radial-gradient(circle at center, #000 0%, #020202 100%);
+  color: #00ffcc;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+.title {
+  color: #00ffcc;
+  text-shadow: 0 0 15px #00ffcc;
+  margin-top: 20px;
+  font-size: 28px;
+  letter-spacing: 2px;
+}
+
+.container {
+  width: 90%;
+  max-width: 700px;
+  margin: 30px auto;
+  padding: 20px;
+  border: 2px solid #00ffcc;
+  border-radius: 15px;
+  box-shadow: 0 0 25px #00ffcc55;
+  background: rgba(0, 10, 10, 0.8);
+}
+
+.form-card, .response-card, .history-section {
+  background: rgba(0, 20, 20, 0.6);
+  border: 1px solid #00ffcc55;
+  border-radius: 10px;
+  padding: 15px;
+  margin-top: 15px;
+  box-shadow: 0 0 10px #00ffcc33;
+}
+
+.field {
+  margin: 10px 0;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  text-align: left;
+}
+
+input, select {
+  width: 95%;
+  padding: 8px;
+  border: 1px solid #00ffcc;
+  border-radius: 6px;
+  background: #001a1a;
+  color: #00ffcc;
+  font-family: inherit;
+}
+
+input:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 8px #00ffcc;
+}
+
+.btn-send, .btn-clear {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 15px;
+  border: none;
+  border-radius: 6px;
+  background: #00ffcc;
+  color: #001010;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+.btn-send:hover { background: #00ffaa; }
+.btn-clear {
+  background: #ff0066;
+  color: white;
+  float: right;
+}
+.btn-clear:hover { background: #ff3388; }
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-box {
+  margin-top: 10px;
+  height: 250px;
+  overflow-y: auto;
+  background: #000;
+  border: 1px solid #00ffcc33;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+  box-shadow: inset 0 0 10px #00ffcc33;
+}
+
+.message {
+  background: rgba(0, 255, 204, 0.1);
+  border-left: 3px solid #00ffcc;
+  padding: 6px 8px;
+  margin: 6px 0;
+  border-radius: 5px;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.note {
+  color: #80ffe0;
+  font-size: 13px;
+}
+.dec {
+  color: #80ffb3;
+  font-weight: bold;
+}
+/* === Toast Bildirimleri === */
+.toast {
+position: fixed;
+top: 20px;
+right: 20px;
+padding: 14px 20px;
+border-radius: 10px;
+color: #fff;
+font-weight: 500;
+font-size: 15px;
+opacity: 0;
+transform: translateY(-20px);
+transition: all 0.3s ease-in-out;
+z-index: 9999;
+box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+}
+.toast.show {
+opacity: 1;
+transform: translateY(0);
+}
+.toast.success { background: #28a745; }
+.toast.error { background: #e74c3c; }
+/* === Sohbet Görünümü === */
+.chat-box {
+background: #f9f9f9;
+border-radius: 12px;
+padding: 15px;
+height: 400px;
+overflow-y: auto;
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+
+.chat-message {
+display: flex;
+flex-direction: column;
+max-width: 80%;
+}
+
+.chat-message.from-client {
+align-self: flex-end;
+}
+
+.chat-message.from-server {
+align-self: flex-start;
+}
+
+.chat-message .meta {
+font-size: 13px;
+color: #777;
+margin-bottom: 4px;
+}
+
+.chat-message .bubble {
+border-radius: 10px;
+padding: 10px 14px;
+font-size: 14px;
+line-height: 1.4;
+box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.chat-message.from-client .bubble {
+background: #007bff;
+color: white;
+border-top-right-radius: 0;
+}
+
+.chat-message.from-server .bubble {
+background: #2ecc71;
+color: white;
+border-top-left-radius: 0;
+}
+
+.chat-message .bubble p {
+margin: 2px 0;
+}

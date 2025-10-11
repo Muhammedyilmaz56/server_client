@@ -2,43 +2,41 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>🔐 KriptoClient</title>
+  <title>KriptoClient</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>🔐 Kriptoloji Client Paneli</h1>
+    <h1>Kriptoloji Client Paneli</h1>
 
-    <!-- 🌐 IP & Port Ayarları -->
     <div class="form-card">
-      <h3>🌐 IP & Port Ayarları</h3>
+      <h3>IP & Port Ayarları</h3>
       <div class="field">
         <label>IP Adresi:</label>
-        <input type="text" id="configIP" value="{{ ip or '' }}" placeholder="örn: 192.168.1.100" required>
+        <input type="text" id="configIP" value="{{ ip or '' }}" placeholder="örn: 192.168.1.100">
       </div>
       <div class="field">
         <label>Port:</label>
-        <input type="number" id="configPort" value="{{ port or '6001' }}" required>
+        <input type="number" id="configPort" value="{{ port or '6001' }}">
       </div>
-      <button id="saveBtn" class="btn-send">💾 Kaydet ve Dinlemeyi Başlat</button>
-      <p id="statusText" style="color: green; font-weight: bold; margin-top: 10px;"></p>
+      <button id="saveBtn" class="btn-send">Kaydet ve Dinlemeyi Başlat</button>
+      <p id="statusText" style="color:green;font-weight:bold;margin-top:10px;"></p>
     </div>
 
-    <!-- 📤 Mesaj Gönder -->
     <div class="form-card">
-      <h3>📤 Mesaj Gönder</h3>
+      <h3>Mesaj Gönder</h3>
       <div class="field">
         <label>Sunucu IP:</label>
-        <input type="text" id="serverIP" placeholder="örn: 192.168.1.170" required>
+        <input type="text" id="serverIP" placeholder="örn: 192.168.1.170">
       </div>
       <div class="field">
         <label>Sunucu Port:</label>
-        <input type="number" id="serverPort" value="6000" required>
+        <input type="number" id="serverPort" value="6000">
       </div>
-
       <div class="field">
         <label>Şifreleme Türü:</label>
-        <select id="algorithmSelect" required>
+        <select id="algorithmSelect">
           <option value="caesar">Sezar</option>
           <option value="vigenere">Vigenere</option>
           <option value="substitution">Substitution</option>
@@ -46,117 +44,118 @@
         </select>
       </div>
 
-      <div class="field">
-        <label>Mesaj:</label>
-        <input type="text" id="messageInput" placeholder="Gönderilecek metin..." required>
+      <div class="field" id="keyField" style="display:none;">
+        <label id="keyLabel">Anahtar:</label>
+        <input type="text" id="keyInput" placeholder="örnek: 3 veya anahtar veya 5,8">
       </div>
 
-      <button id="sendBtn" class="btn-send">📡 Gönder</button>
+      <div class="field">
+        <label>Mesaj:</label>
+        <input type="text" id="messageInput" placeholder="Gönderilecek metin...">
+      </div>
+      <button id="sendBtn" class="btn-send">Gönder</button>
     </div>
 
-    <!-- 🔓 Gelen Mesajlar -->
     <div class="response-card">
-      <h3>🔓 Sunucudan Gelen Mesajlar</h3>
-      <div id="incomingBox" class="history-box"></div>
-      <button id="clearBtn" class="btn-clear">🧹 Temizle</button>
+      <h3>Sohbet Geçmişi</h3>
+      <div id="chatBox" class="chat-box"></div>
+      <button id="clearBtn" class="btn-clear">Temizle</button>
     </div>
   </div>
 
   <script>
-    // === IP ve Port Ayarlarını Kaydet ===
-    document.getElementById("saveBtn").addEventListener("click", async () => {
-      const ip = document.getElementById("configIP").value.trim();
-      const port = document.getElementById("configPort").value.trim();
-      const statusText = document.getElementById("statusText");
+    const socket = io();
 
-      if (!ip || !port) {
-        alert("⚠️ Lütfen geçerli bir IP ve port girin!");
-        return;
-      }
+    socket.on("connect", () => console.log("SocketIO bağlantısı aktif"));
 
-      const formData = new FormData();
-      formData.append("ip", ip);
-      formData.append("port", port);
-
-      try {
-        const res = await fetch("/update_config", {
-          method: "POST",
-          body: formData
-        });
-        const data = await res.json();
-
-        if (data.status === "ok") {
-          statusText.textContent = `✅ Dinleme başlatıldı: ${data.ip}:${data.port}`;
-        } else {
-          statusText.textContent = "❌ Dinleme başlatılamadı: " + (data.message || "");
-          statusText.style.color = "red";
-        }
-      } catch (err) {
-        statusText.textContent = "❌ Flask backend'e ulaşılamadı!";
-        statusText.style.color = "red";
-      }
+    socket.on("incoming_new", (msg) => {
+      addMessage(msg);
     });
 
-    // === Mesaj Gönder ===
-    document.getElementById("sendBtn").addEventListener("click", async () => {
-      const ip = document.getElementById("serverIP").value.trim();
-      const port = document.getElementById("serverPort").value.trim();
-      const message = document.getElementById("messageInput").value.trim();
-      const algorithm = document.getElementById("algorithmSelect").value;
-
-      if (!ip || !port || !message) {
-        alert("⚠️ Tüm alanları doldurun!");
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("ip", ip);
-      formData.append("port", port);
-      formData.append("message", message);
-      formData.append("algorithm", algorithm);
-
-      try {
-        const res = await fetch("/send_message", {
-          method: "POST",
-          body: formData
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          alert("✅ Mesaj gönderildi!\nSunucu cevabı: " + data.response);
-        } else {
-          alert("❌ Gönderim hatası: " + data.response);
-        }
-      } catch (err) {
-        alert("❌ Bağlantı kurulamadı. Sunucu IP/Port kontrol edin.");
-      }
+    socket.on("incoming_cleared", () => {
+      document.getElementById("chatBox").innerHTML = "";
     });
 
-    // === Gelen Mesajları Yükle ===
-    async function loadIncoming() {
-      try {
-        const res = await fetch("/incoming");
-        const data = await res.json();
-        const box = document.getElementById("incomingBox");
-        box.innerHTML = "";
-        data.forEach(msg => {
-          const div = document.createElement("div");
-          div.classList.add("message");
-          div.textContent = msg;
-          box.appendChild(div);
-        });
-      } catch (err) {
-        console.warn("🔁 Mesaj yüklenemedi:", err);
-      }
+    function addMessage(msg) {
+      const box = document.getElementById("chatBox");
+      const div = document.createElement("div");
+      div.classList.add("chat-message");
+
+      if (msg.from === "client") div.classList.add("from-client");
+      else div.classList.add("from-server");
+
+      div.innerHTML = `
+        <div class="meta">
+          <b>${msg.from === "client" ? "Client" : "Server"}</b> 
+          <small>(${msg.algorithm})</small>
+        </div>
+        <div class="bubble">
+          <p><b>Şifreli:</b> ${msg.encrypted}</p>
+          <p><b>Çözülmüş:</b> ${msg.decrypted}</p>
+        </div>
+      `;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
     }
 
-    // === Temizle ===
-    document.getElementById("clearBtn").addEventListener("click", async () => {
-      await fetch("/clear", { method: "POST" });
-      document.getElementById("incomingBox").innerHTML = "";
+    document.getElementById("saveBtn").onclick = async () => {
+      const ip = document.getElementById("configIP").value.trim();
+      const port = document.getElementById("configPort").value.trim();
+      if (!ip || !port) return alert("IP ve port girin!");
+      const form = new FormData();
+      form.append("ip", ip);
+      form.append("port", port);
+      const res = await fetch("/update_config", { method: "POST", body: form });
+      const data = await res.json();
+      const text = document.getElementById("statusText");
+      if (data.status === "ok") text.textContent = `Dinleme: ${data.ip}:${data.port}`;
+      else text.textContent = "Hata: " + data.message;
+    };
+
+    const algoSelect = document.getElementById("algorithmSelect");
+    const keyField = document.getElementById("keyField");
+    const keyLabel = document.getElementById("keyLabel");
+    algoSelect.addEventListener("change", () => {
+      const algo = algoSelect.value;
+      if (algo === "caesar") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Anahtar (örn: 3)";
+      } else if (algo === "vigenere") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Anahtar (örn: anahtar)";
+      } else if (algo === "affine") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "a,b Değerleri (örn: 5,8)";
+      } else {
+        keyField.style.display = "none";
+      }
     });
 
-    setInterval(loadIncoming, 2000);
+    document.getElementById("sendBtn").onclick = async () => {
+      const ip = document.getElementById("serverIP").value.trim();
+      const port = document.getElementById("serverPort").value.trim();
+      const msg = document.getElementById("messageInput").value.trim();
+      const algo = document.getElementById("algorithmSelect").value;
+      const key = document.getElementById("keyInput").value.trim();
+
+      if (!ip || !port || !msg) return alert("Tüm alanları doldurun!");
+      const form = new FormData();
+      form.append("ip", ip);
+      form.append("port", port);
+      form.append("message", msg);
+      form.append("algorithm", algo);
+      if (key) form.append("key", key);
+
+      const res = await fetch("/send_message", { method: "POST", body: form });
+      const data = await res.json();
+
+      if (!data.success) alert("Hata: " + data.response);
+      else document.getElementById("messageInput").value = "";
+    };
+
+    document.getElementById("clearBtn").onclick = async () => {
+      await fetch("/clear", { method: "POST" });
+    };
   </script>
 </body>
 </html>
