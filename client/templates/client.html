@@ -41,6 +41,7 @@
           <option value="vigenere">Vigenere</option>
           <option value="substitution">Substitution</option>
           <option value="affine">Affine</option>
+          <option value="playfair">Playfair</option>
         </select>
       </div>
 
@@ -126,6 +127,9 @@
       } else if (algo === "affine") {
         keyField.style.display = "block";
         keyLabel.textContent = "a,b Değerleri (örn: 5,8)";
+      } else if (algo === "playfair") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Anahtar (örn: MONARCHY)";
       } else {
         keyField.style.display = "none";
       }

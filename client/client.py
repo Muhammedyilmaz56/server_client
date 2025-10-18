@@ -34,6 +34,9 @@ def decrypt_message(algorithm, text, key=None):
             if math.gcd(a, 26) != 1:
                 return f"a={a} 26 ile aralarında asal değil!"
             return affine_decrypt(text, a, b)
+        elif algorithm == "playfair":
+            key = key if key else "monarchy"
+            return playfair_decrypt(text, key)
         else:
             return text
     except Exception as e:
@@ -115,6 +118,9 @@ def send_message(ip, port, message, algorithm="caesar", key=None):
             if math.gcd(a, 26) != 1:
                 raise ValueError(f"a={a} 26 ile aralarında asal değil!")
             encrypted = affine_encrypt(message, a, b)
+        elif algorithm == "playfair":
+            key = key if key else "monarchy"
+            encrypted = playfair_encrypt(message, key)
         else:
             encrypted = message
 

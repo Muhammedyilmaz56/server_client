@@ -103,3 +103,80 @@ def affine_decrypt(cipher, a, b):
         else:
             result += char
     return result
+
+def prepare_playfair_matrix(key):
+    key = normalize_text(key.lower().replace("j", "i"))
+    alphabet = "abcdefghiklmnopqrstuvwxyz"
+    seen = set()
+    matrix = []
+    for char in key + alphabet:
+        if char not in seen and char.isalpha():
+            seen.add(char)
+            matrix.append(char)
+    return [matrix[i:i+5] for i in range(0, 25, 5)]
+
+def playfair_find_position(matrix, char):
+    for i in range(5):
+        for j in range(5):
+            if matrix[i][j] == char:
+                return i, j
+    return None, None
+
+def playfair_prepare_text(text):
+    text = normalize_text(text.lower().replace("j", "i"))
+    cleaned = [c for c in text if c.isalpha()]
+    pairs = []
+    i = 0
+    while i < len(cleaned):
+        a = cleaned[i]
+        b = ''
+        if i + 1 < len(cleaned):
+            b = cleaned[i + 1]
+        if a == b:
+            pairs.append((a, 'x'))
+            i += 1
+        else:
+            if b:
+                pairs.append((a, b))
+                i += 2
+            else:
+                pairs.append((a, 'x'))
+                i += 1
+    return pairs
+
+def playfair_encrypt(text, key):
+    matrix = prepare_playfair_matrix(key)
+    pairs = playfair_prepare_text(text)
+    result = ""
+    for a, b in pairs:
+        row_a, col_a = playfair_find_position(matrix, a)
+        row_b, col_b = playfair_find_position(matrix, b)
+        if row_a == row_b:
+            result += matrix[row_a][(col_a + 1) % 5]
+            result += matrix[row_b][(col_b + 1) % 5]
+        elif col_a == col_b:
+            result += matrix[(row_a + 1) % 5][col_a]
+            result += matrix[(row_b + 1) % 5][col_b]
+        else:
+            result += matrix[row_a][col_b]
+            result += matrix[row_b][col_a]
+    return result.upper()
+
+def playfair_decrypt(cipher, key):
+    matrix = prepare_playfair_matrix(key)
+    cipher = normalize_text(cipher.lower().replace("j", "i"))
+    pairs = [(cipher[i], cipher[i + 1]) for i in range(0, len(cipher), 2)]
+    result = ""
+    for a, b in pairs:
+        row_a, col_a = playfair_find_position(matrix, a)
+        row_b, col_b = playfair_find_position(matrix, b)
+        if row_a == row_b:
+            result += matrix[row_a][(col_a - 1) % 5]
+            result += matrix[row_b][(col_b - 1) % 5]
+        elif col_a == col_b:
+            result += matrix[(row_a - 1) % 5][col_a]
+            result += matrix[(row_b - 1) % 5][col_b]
+        else:
+            result += matrix[row_a][col_b]
+            result += matrix[row_b][col_a]
+    return result.upper()
