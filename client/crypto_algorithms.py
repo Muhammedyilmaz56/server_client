@@ -346,3 +346,34 @@ def columnar_decrypt(cipher, key):
         for c in range(cols):
             result += matrix[r][c]
     return result
+def polybius_encrypt(text):
+    text = normalize_text(text).upper().replace("J", "I").replace(" ", "")
+    alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+    grid = {alphabet[i]: divmod(i, 5) for i in range(25)}
+    out = []
+    for ch in text:
+        if ch in grid:
+            r, c = grid[ch]
+            out.append(str(r + 1))
+            out.append(str(c + 1))
+        else:
+            continue
+    return "".join(out)
+
+
+def polybius_decrypt(cipher):
+    cipher = cipher.replace(" ", "")
+    alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+    out = []
+    i = 0
+    while i < len(cipher):
+        if i + 1 < len(cipher) and cipher[i].isdigit() and cipher[i + 1].isdigit():
+            r = int(cipher[i])
+            c = int(cipher[i + 1])
+            idx = (r - 1) * 5 + (c - 1)
+            if 0 <= idx < 25:
+                out.append(alphabet[idx])
+            i += 2
+        else:
+            i += 1
+    return "".join(out)

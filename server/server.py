@@ -45,6 +45,9 @@ def decrypt_message(algorithm, text, key=None):
         elif algorithm == "columnar":
             key = key if key else "TRUVA"
             return columnar_decrypt(text, key)
+        elif algorithm == "polybius":
+            return polybius_decrypt(text)
+
 
 
 
@@ -145,6 +148,9 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
         elif algorithm == "columnar":
             key = key if key else "TRUVA"
             encrypted = columnar_encrypt(message, key)
+        elif algorithm == "polybius":
+            encrypted = polybius_encrypt(message)
+
 
        
         else:
