@@ -304,3 +304,45 @@ def route_decrypt(cipher, cols, clockwise=True):
         for c in range(cols):
             result.append(matrix[r][c])
     return "".join(result)
+def columnar_encrypt(text, key):
+    text = text.replace(" ", "").upper()
+    key = key.upper()
+    cols = len(key)
+    rows = (len(text) + cols - 1) // cols
+    matrix = [["X" for _ in range(cols)] for _ in range(rows)]
+    idx = 0
+    for r in range(rows):
+        for c in range(cols):
+            if idx < len(text):
+                matrix[r][c] = text[idx]
+                idx += 1
+    key_order = sorted(list(key))
+    order = [key_order.index(k) + 1 for k in key]
+    result = ""
+    for num in sorted(order):
+        col = order.index(num)
+        for r in range(rows):
+            result += matrix[r][col]
+    return result
+
+
+def columnar_decrypt(cipher, key):
+    key = key.upper()
+    cols = len(key)
+    rows = (len(cipher) + cols - 1) // cols
+    key_order = sorted(list(key))
+    order = [key_order.index(k) + 1 for k in key]
+    matrix = [["" for _ in range(cols)] for _ in range(rows)]
+    col_lengths = [rows] * cols
+    idx = 0
+    for num in sorted(order):
+        col = order.index(num)
+        for r in range(col_lengths[col]):
+            if idx < len(cipher):
+                matrix[r][col] = cipher[idx]
+                idx += 1
+    result = ""
+    for r in range(rows):
+        for c in range(cols):
+            result += matrix[r][c]
+    return result

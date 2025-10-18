@@ -37,6 +37,7 @@
       <div class="field">
         <label>Şifreleme Türü:</label>
         <select id="algorithmSelect">
+          <option value="" disabled selected>Lütfen algoritma seçin</option>
           <option value="caesar">Sezar</option>
           <option value="vigenere">Vigenere</option>
           <option value="substitution">Substitution</option>
@@ -44,6 +45,7 @@
           <option value="playfair">Playfair</option>
           <option value="railfence">Rail Fence</option>
           <option value="route">Route Cipher</option>
+          <option value="columnar">Columnar Cipher</option>
 
 
         </select>
@@ -134,6 +136,12 @@
       } else if (algo === "railfence") {
         keyField.style.display = "block";
         keyLabel.textContent = "Anahtar (satır sayısı, örn: 2)";
+      }else if (algo === "route") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Sütun sayısı (örn: 5)";
+      }else if (algo === "columnar") {
+         keyField.style.display = "block";
+         keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
       } else {
         keyField.style.display = "none";
       }

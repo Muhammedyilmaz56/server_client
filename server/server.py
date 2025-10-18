@@ -42,6 +42,10 @@ def decrypt_message(algorithm, text, key=None):
         elif algorithm == "route":
             cols = int(key) if key else 5
             return route_decrypt(text, cols)
+        elif algorithm == "columnar":
+            key = key if key else "TRUVA"
+            return columnar_decrypt(text, key)
+
 
 
         return text
@@ -138,6 +142,10 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
         elif algorithm == "route":
             cols = int(key) if key else 5
             encrypted = route_encrypt(message, cols)
+        elif algorithm == "columnar":
+            key = key if key else "TRUVA"
+            encrypted = columnar_encrypt(message, key)
+
        
         else:
             encrypted = message
