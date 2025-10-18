@@ -42,6 +42,8 @@
           <option value="substitution">Substitution</option>
           <option value="affine">Affine</option>
           <option value="playfair">Playfair</option>
+          <option value="railfence">Rail Fence</option>
+
         </select>
       </div>
 
@@ -127,6 +129,9 @@
       } else if (algo === "playfair") {
         keyField.style.display = "block";
         keyLabel.textContent = "Anahtar (örn: MONARCHY)";
+      } else if (algo === "railfence") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Anahtar (satır sayısı, örn: 2)";
       } else {
         keyField.style.display = "none";
       }

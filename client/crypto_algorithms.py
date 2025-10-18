@@ -180,3 +180,53 @@ def playfair_decrypt(cipher, key):
             result += matrix[row_a][col_b]
             result += matrix[row_b][col_a]
     return result.upper()
+def rail_fence_encrypt(text, key):
+    if not isinstance(key, int) or key <= 1 or len(text) <= 1:
+        return text
+    rails = ['' for _ in range(key)]
+    direction_down = False
+    row = 0
+    for char in text:
+        rails[row] += char
+        if row == 0 or row == key - 1:
+            direction_down = not direction_down
+        row += 1 if direction_down else -1
+    return ''.join(rails)
+
+
+
+def rail_fence_decrypt(cipher, key):
+    if not isinstance(key, int) or key <= 1 or len(cipher) <= 1:
+        return cipher
+    if not isinstance(key, int) or key <= 1:
+        raise ValueError("Anahtar (satır sayısı) 2 veya daha büyük bir tam sayı olmalıdır")
+    rail_pattern = []
+    direction_down = None
+    row = 0
+    for _ in range(len(cipher)):
+        rail_pattern.append(row)
+        if row == 0:
+            direction_down = True
+        elif row == key - 1:
+            direction_down = False
+        row += 1 if direction_down else -1
+    rails = ['' for _ in range(key)]
+    index = 0
+    for i in range(key):
+        for j in range(len(cipher)):
+            if rail_pattern[j] == i:
+                rails[i] += cipher[index]
+                index += 1
+    result = ''
+    rail_pos = [0] * key
+    row = 0
+    for i in range(len(cipher)):
+        result += rails[row][rail_pos[row]]
+        rail_pos[row] += 1
+        if row == 0:
+            direction_down = True
+        elif row == key - 1:
+            direction_down = False
+        row += 1 if direction_down else -1
+    return result
+

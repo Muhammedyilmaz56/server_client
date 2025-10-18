@@ -36,6 +36,10 @@ def decrypt_message(algorithm, text, key=None):
         elif algorithm == "playfair":
             key = key if key else "monarchy"
             return playfair_decrypt(text, key)
+        elif algorithm == "railfence":
+            key = int(key) if key else 2
+            return rail_fence_decrypt(text, key)
+
         return text
     except Exception as e:
         return f"Hata: {e}"
@@ -124,6 +128,9 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
         elif algorithm == "playfair":
             key = key if key else "monarchy"
             encrypted = playfair_encrypt(message, key)
+        elif algorithm == "railfence":
+            key = int(key) if key else 2
+            encrypted = rail_fence_encrypt(message, key)    
         else:
             encrypted = message
 
