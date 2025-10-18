@@ -39,6 +39,10 @@ def decrypt_message(algorithm, text, key=None):
         elif algorithm == "railfence":
             key = int(key) if key else 2
             return rail_fence_decrypt(text, key)
+        elif algorithm == "route":
+            cols = int(key) if key else 5
+            return route_decrypt(text, cols)
+
 
         return text
     except Exception as e:
@@ -130,7 +134,11 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
             encrypted = playfair_encrypt(message, key)
         elif algorithm == "railfence":
             key = int(key) if key else 2
-            encrypted = rail_fence_encrypt(message, key)    
+            encrypted = rail_fence_encrypt(message, key) 
+        elif algorithm == "route":
+            cols = int(key) if key else 5
+            encrypted = route_encrypt(message, cols)
+       
         else:
             encrypted = message
 

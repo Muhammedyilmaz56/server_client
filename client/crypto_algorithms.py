@@ -230,3 +230,77 @@ def rail_fence_decrypt(cipher, key):
         row += 1 if direction_down else -1
     return result
 
+def route_encrypt(text, cols, clockwise=True):
+    text = text.replace(" ", "").upper()
+    if not cols or cols <= 0:
+        return text
+    rows = (len(text) + cols - 1) // cols
+    matrix = [["X" for _ in range(cols)] for _ in range(rows)]
+    idx = 0
+    for r in range(rows):
+        for c in range(cols):
+            if idx < len(text):
+                matrix[r][c] = text[idx]
+                idx += 1
+
+    result = []
+    top, left = 0, 0
+    bottom, right = rows - 1, cols - 1
+
+    while top <= bottom and left <= right:
+        for c in range(right, left - 1, -1):
+            result.append(matrix[top][c])
+        top += 1
+        for r in range(top, bottom + 1):
+            result.append(matrix[r][left])
+        left += 1
+        if top <= bottom:
+            for c in range(left, right + 1):
+                result.append(matrix[bottom][c])
+            bottom -= 1
+        if left <= right:
+            for r in range(bottom, top - 1, -1):
+                result.append(matrix[r][right])
+            right -= 1
+    return "".join(result)
+
+
+def route_decrypt(cipher, cols, clockwise=True):
+    if not cols or cols <= 0:
+        return cipher
+    text = list(cipher)
+    rows = (len(cipher) + cols - 1) // cols
+    matrix = [["" for _ in range(cols)] for _ in range(rows)]
+    top, left = 0, 0
+    bottom, right = rows - 1, cols - 1
+    idx = 0
+
+    while top <= bottom and left <= right:
+        for c in range(right, left - 1, -1):
+            if idx < len(cipher):
+                matrix[top][c] = text[idx]
+                idx += 1
+        top += 1
+        for r in range(top, bottom + 1):
+            if idx < len(cipher):
+                matrix[r][left] = text[idx]
+                idx += 1
+        left += 1
+        if top <= bottom:
+            for c in range(left, right + 1):
+                if idx < len(cipher):
+                    matrix[bottom][c] = text[idx]
+                    idx += 1
+            bottom -= 1
+        if left <= right:
+            for r in range(bottom, top - 1, -1):
+                if idx < len(cipher):
+                    matrix[r][right] = text[idx]
+                    idx += 1
+            right -= 1
+
+    result = []
+    for r in range(rows):
+        for c in range(cols):
+            result.append(matrix[r][c])
+    return "".join(result)
