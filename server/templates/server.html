@@ -47,6 +47,7 @@
           <option value="route">Route Cipher</option>
           <option value="columnar">Columnar Cipher</option>
           <option value="polybius">Polybius Cipher</option>
+          <option value="pigpen">Pigpen Cipher</option>
 
 
 
@@ -96,26 +97,43 @@
     });
 
     function addMessage(m) {
-      const box = document.getElementById("chatBox");
-      const div = document.createElement("div");
-      div.classList.add("chat-message");
-      const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-      if (m.direction === "Server → Client") div.classList.add("from-server");
-      else div.classList.add("from-client");
-      div.innerHTML = `
-        <div class="meta">
-          <b>${m.direction}</b> 
-          <small>(${m.algorithm})</small> 
-          <small>${time}</small>
-        </div>
-        <div class="bubble">
-          <p><b>Şifreli:</b> ${m.encrypted}</p>
-          <p><b>Çözülmüş:</b> ${m.decrypted}</p>
-        </div>
-      `;
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-    }
+  const box = document.getElementById("chatBox");
+  const div = document.createElement("div");
+  div.classList.add("chat-message");
+
+  if (m.direction === "Server → Client") div.classList.add("from-server");
+  else div.classList.add("from-client");
+
+  // Pigpen gibi görsel tabanlı mesajları destekler
+  if (m.algorithm === "pigpen") {
+    div.innerHTML = `
+      <div class="meta">
+        <b>${m.direction}</b> 
+        <small>(${m.algorithm})</small>
+      </div>
+      <div class="bubble">
+        <p><b>Şifreli:</b></p>
+        <div>${m.encrypted.split('|').map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
+        <p><b>Çözülmüş:</b> ${m.decrypted}</p>
+      </div>
+    `;
+  } else {
+    div.innerHTML = `
+      <div class="meta">
+        <b>${m.direction}</b> 
+        <small>(${m.algorithm})</small>
+      </div>
+      <div class="bubble">
+        <p><b>Şifreli:</b> ${m.encrypted}</p>
+        <p><b>Çözülmüş:</b> ${m.decrypted}</p>
+      </div>
+    `;
+  }
+
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
 
     const algoSelect = document.getElementById("algorithmSelect");
     const keyField = document.getElementById("keyField");

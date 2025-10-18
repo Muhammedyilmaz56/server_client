@@ -15,6 +15,7 @@ server_socket = None
 server_running = False
 
 
+# ---------------- Şifre Çözme ----------------
 def decrypt_message(algorithm, text, key=None):
     try:
         if algorithm == "caesar":
@@ -47,18 +48,19 @@ def decrypt_message(algorithm, text, key=None):
             return columnar_decrypt(text, key)
         elif algorithm == "polybius":
             return polybius_decrypt(text)
-
-
-
-
-        return text
+        elif algorithm == "pigpen":
+            return pigpen_decrypt(text)
+        else:
+            return text
     except Exception as e:
         return f"Hata: {e}"
 
 
+# ---------------- Sunucu Başlatma ----------------
 def start_socket_server(ip, port):
     global server_socket, server_running
     if server_running:
+        print("Sunucu zaten çalışıyor.")
         return
 
     def server_loop(bind_ip, bind_port):
@@ -74,35 +76,47 @@ def start_socket_server(ip, port):
             while server_running:
                 conn, addr = server_socket.accept()
                 client_ip, client_port = addr
-                data = conn.recv(4096).decode("utf-8", errors="replace")
-                if not data:
-                    conn.close()
-                    continue
+                print(f"Yeni bağlantı: {client_ip}:{client_port}")
 
-                if "||" in data:
-                    parts = data.split("||", 2)
-                    algorithm = parts[0]
-                    if len(parts) == 3:
-                        key, encrypted_text = parts[1], parts[2]
+                # 🔹 Aynı bağlantı açık kaldığı sürece sürekli dinle
+                while True:
+                    try:
+                        data = conn.recv(4096).decode("utf-8", errors="replace")
+                        if not data:
+                            break  # bağlantı kapatıldıysa çık
+                    except ConnectionResetError:
+                        break
+
+                    if "||" in data:
+                        parts = data.split("||", 2)
+                        algorithm = parts[0]
+                        if len(parts) == 3:
+                            key, encrypted_text = parts[1], parts[2]
+                        else:
+                            key, encrypted_text = None, parts[1]
+                        decrypted_text = decrypt_message(algorithm, encrypted_text, key)
+                        payload = data
                     else:
-                        key, encrypted_text = None, parts[1]
-                    decrypted_text = decrypt_message(algorithm, encrypted_text, key)
-                    payload = data
-                else:
-                    algorithm = "plain"
-                    payload = data
-                    decrypted_text = data
+                        algorithm = "plain"
+                        payload = data
+                        decrypted_text = data
 
-                new_message = {
-                    "direction": "Client → Server",
-                    "algorithm": algorithm,
-                    "encrypted": payload,
-                    "decrypted": decrypted_text
-                }
-                messages.append(new_message)
-                socketio.emit('new_message', new_message)
-                conn.send(f"Sunucu cevabı: {decrypted_text}".encode("utf-8"))
+                    new_message = {
+                        "direction": "Client → Server",
+                        "algorithm": algorithm,
+                        "encrypted": payload,
+                        "decrypted": decrypted_text
+                    }
+                    messages.append(new_message)
+                    socketio.emit('new_message', new_message)
+
+                    # 🔹 Sunucu cevabı gönder
+                    response = f"Sunucu cevabı: {decrypted_text}"
+                    conn.send(response.encode("utf-8"))
+
                 conn.close()
+                print(f"Bağlantı kapandı: {client_ip}:{client_port}")
+
         except Exception as e:
             print("Server hatası:", e)
         finally:
@@ -118,6 +132,7 @@ def start_socket_server(ip, port):
     t.start()
 
 
+# ---------------- Sunucudan İstemciye Mesaj Gönder ----------------
 def send_to_client(ip, port, message, algorithm="caesar", key=None):
     try:
         if algorithm == "caesar":
@@ -141,7 +156,7 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
             encrypted = playfair_encrypt(message, key)
         elif algorithm == "railfence":
             key = int(key) if key else 2
-            encrypted = rail_fence_encrypt(message, key) 
+            encrypted = rail_fence_encrypt(message, key)
         elif algorithm == "route":
             cols = int(key) if key else 5
             encrypted = route_encrypt(message, cols)
@@ -150,9 +165,8 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
             encrypted = columnar_encrypt(message, key)
         elif algorithm == "polybius":
             encrypted = polybius_encrypt(message)
-
-
-       
+        elif algorithm == "pigpen":
+            encrypted = pigpen_encrypt(message)
         else:
             encrypted = message
 
@@ -176,6 +190,7 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
         return False
 
 
+# ---------------- Flask Routes ----------------
 @app.route("/")
 def index():
     return render_template("server.html", started=server_running, ip=CURRENT_IP, port=CURRENT_PORT)

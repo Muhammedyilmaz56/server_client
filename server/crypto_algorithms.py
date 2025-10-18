@@ -1,4 +1,5 @@
 import math
+import os
 
 def safe_char(c):
     turkish_chars = "çğıöşüÇĞİÖŞÜ"
@@ -377,3 +378,20 @@ def polybius_decrypt(cipher):
         else:
             i += 1
     return "".join(out)
+def pigpen_encrypt(text):
+    base_path = "static/pigpen"
+    text = text.upper().replace(" ", "")
+    result = []
+    for ch in text:
+        if 'A' <= ch <= 'Z':
+            result.append(f"/{base_path}/{ch}.png")
+    return "|".join(result)
+
+def pigpen_decrypt(cipher):
+    parts = cipher.split("|")
+    result = ""
+    for p in parts:
+        if p.strip():
+            ch = p.split("/")[-1].split(".")[0]
+            result += ch
+    return result

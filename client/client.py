@@ -11,11 +11,16 @@ socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
 CURRENT_IP = None
 CURRENT_PORT = None
 incoming_messages = []
+
 listener_thread = None
 listener_socket = None
 listener_running = False
 
+client_socket = None          # 🔹 Kalıcı bağlantı için global değişken
+client_connected = False
 
+
+# ---------------- Şifre Çözme Fonksiyonu ----------------
 def decrypt_message(algorithm, text, key=None):
     try:
         if algorithm == "caesar":
@@ -48,14 +53,15 @@ def decrypt_message(algorithm, text, key=None):
             return columnar_decrypt(text, key)
         elif algorithm == "polybius":
             return polybius_decrypt(text)
-
-
+        elif algorithm == "pigpen":
+            return pigpen_decrypt(text)
         else:
             return text
     except Exception as e:
         return f"Hata: {e}"
 
 
+# ---------------- Sunucudan Gelen Mesajları Dinleme ----------------
 def start_client_listener(ip, port):
     global listener_thread, listener_socket, listener_running
     if listener_running:
@@ -73,36 +79,36 @@ def start_client_listener(ip, port):
 
             while True:
                 conn, addr = listener_socket.accept()
-                data = conn.recv(4096).decode("utf-8", errors="replace")
-                if not data:
-                    conn.close()
-                    continue
+                while True:
+                    data = conn.recv(4096).decode("utf-8", errors="replace")
+                    if not data:
+                        break
 
-                if "||" in data:
-                    parts = data.split("||", 2)
-                    algorithm = parts[0]
-                    if len(parts) == 3:
-                        key, encrypted_text = parts[1], parts[2]
+                    if "||" in data:
+                        parts = data.split("||", 2)
+                        algorithm = parts[0]
+                        if len(parts) == 3:
+                            key, encrypted_text = parts[1], parts[2]
+                        else:
+                            key, encrypted_text = None, parts[1]
+                        decrypted = decrypt_message(algorithm, encrypted_text, key)
+                        msg_data = {
+                            "from": "server",
+                            "algorithm": algorithm,
+                            "encrypted": encrypted_text,
+                            "decrypted": decrypted
+                        }
                     else:
-                        key, encrypted_text = None, parts[1]
-                    decrypted = decrypt_message(algorithm, encrypted_text, key)
-                    msg_data = {
-                        "from": "server",
-                        "algorithm": algorithm,
-                        "encrypted": encrypted_text,
-                        "decrypted": decrypted
-                    }
+                        msg_data = {
+                            "from": "server",
+                            "algorithm": "plain",
+                            "encrypted": data,
+                            "decrypted": data
+                        }
+
                     incoming_messages.append(msg_data)
                     socketio.emit("incoming_new", msg_data)
-                else:
-                    msg_data = {
-                        "from": "server",
-                        "algorithm": "plain",
-                        "encrypted": data,
-                        "decrypted": data
-                    }
-                    incoming_messages.append(msg_data)
-                    socketio.emit("incoming_new", msg_data)
+
                 conn.close()
         except OSError as e:
             print(f"Listener başlatılamadı: {e}")
@@ -113,8 +119,19 @@ def start_client_listener(ip, port):
     listener_thread.start()
 
 
+# ---------------- Mesaj Gönderme (Kalıcı Bağlantı) ----------------
 def send_message(ip, port, message, algorithm="caesar", key=None):
+    global client_socket, client_connected
+
     try:
+        # 🔹 Bağlantı henüz kurulmadıysa bir kere aç
+        if not client_connected:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((ip, int(port)))
+            client_connected = True
+            print(f"{ip}:{port} adresine bağlantı kuruldu.")
+
+        # 🔹 Mesajı seçilen algoritmayla şifrele
         if algorithm == "caesar":
             shift = int(key) if key else 3
             encrypted = caesar_encrypt(message, shift)
@@ -138,29 +155,21 @@ def send_message(ip, port, message, algorithm="caesar", key=None):
             key = int(key) if key else 2
             encrypted = rail_fence_encrypt(message, key)
         elif algorithm == "route":
-           cols = int(key) if key else 5
-           encrypted = route_encrypt(message, cols)
+            cols = int(key) if key else 5
+            encrypted = route_encrypt(message, cols)
         elif algorithm == "columnar":
             key = key if key else "TRUVA"
             encrypted = columnar_encrypt(message, key)
         elif algorithm == "polybius":
             encrypted = polybius_encrypt(message)
-
-    
-    
+        elif algorithm == "pigpen":
+            encrypted = pigpen_encrypt(message)
         else:
             encrypted = message
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((ip, int(port)))
+        # 🔹 Sunucuya gönder
         send_data = f"{algorithm}||{key or ''}||{encrypted}"
-        s.send(send_data.encode("utf-8"))
-
-        try:
-            response = s.recv(1024).decode("utf-8", errors="replace")
-        except:
-            response = "Mesaj gönderildi."
-        s.close()
+        client_socket.send(send_data.encode("utf-8"))
 
         msg_data = {
             "from": "client",
@@ -170,11 +179,12 @@ def send_message(ip, port, message, algorithm="caesar", key=None):
         }
         incoming_messages.append(msg_data)
         socketio.emit("incoming_new", msg_data)
-        return response
+        return "Mesaj gönderildi."
     except Exception as e:
         return f"Hata: {str(e)}"
 
 
+# ---------------- Flask Routes ----------------
 @app.route("/update_config", methods=["POST"])
 def update_config():
     global CURRENT_IP, CURRENT_PORT
@@ -200,8 +210,6 @@ def send_message_ajax():
         return jsonify({"success": False, "response": "Eksik alanlar var!"})
 
     response = send_message(ip, port, message, algorithm, key)
-    if response.startswith("Hata") or "asal" in response:
-        return jsonify({"success": False, "response": response})
     return jsonify({"success": True, "response": response})
 
 

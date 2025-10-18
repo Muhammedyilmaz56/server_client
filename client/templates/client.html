@@ -47,8 +47,7 @@
           <option value="route">Route Cipher</option>
           <option value="columnar">Columnar Cipher</option>
           <option value="polybius">Polybius Cipher</option>
-
-
+          <option value="pigpen">Pigpen Cipher</option>
         </select>
       </div>
 
@@ -74,6 +73,43 @@
   <script>
     const socket = io();
 
+    function addMessage(msg) {
+      const box = document.getElementById("chatBox");
+      const div = document.createElement("div");
+      div.classList.add("chat-message");
+
+      if (msg.from === "client") div.classList.add("from-client");
+      else div.classList.add("from-server");
+
+      if (msg.algorithm === "pigpen") {
+        div.innerHTML = `
+          <div class="meta">
+            <b>${msg.from === "client" ? "Client" : "Server"}</b> 
+            <small>(${msg.algorithm})</small>
+          </div>
+          <div class="bubble">
+            <p><b>Şifreli:</b></p>
+            <div>${msg.encrypted.split('|').map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
+            <p><b>Çözülmüş:</b> ${msg.decrypted}</p>
+          </div>
+        `;
+      } else {
+        div.innerHTML = `
+          <div class="meta">
+            <b>${msg.from === "client" ? "Client" : "Server"}</b> 
+            <small>(${msg.algorithm})</small>
+          </div>
+          <div class="bubble">
+            <p><b>Şifreli:</b> ${msg.encrypted}</p>
+            <p><b>Çözülmüş:</b> ${msg.decrypted}</p>
+          </div>
+        `;
+      }
+
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
     socket.on("connect", () => console.log("SocketIO bağlantısı aktif"));
 
     socket.on("incoming_new", (msg) => {
@@ -83,28 +119,6 @@
     socket.on("incoming_cleared", () => {
       document.getElementById("chatBox").innerHTML = "";
     });
-
-    function addMessage(msg) {
-      const box = document.getElementById("chatBox");
-      const div = document.createElement("div");
-      div.classList.add("chat-message");
-
-      if (msg.from === "client") div.classList.add("from-client");
-      else div.classList.add("from-server");
-
-      div.innerHTML = `
-        <div class="meta">
-          <b>${msg.from === "client" ? "Client" : "Server"}</b> 
-          <small>(${msg.algorithm})</small>
-        </div>
-        <div class="bubble">
-          <p><b>Şifreli:</b> ${msg.encrypted}</p>
-          <p><b>Çözülmüş:</b> ${msg.decrypted}</p>
-        </div>
-      `;
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-    }
 
     document.getElementById("saveBtn").onclick = async () => {
       const ip = document.getElementById("configIP").value.trim();
@@ -116,8 +130,13 @@
       const res = await fetch("/update_config", { method: "POST", body: form });
       const data = await res.json();
       const text = document.getElementById("statusText");
-      if (data.status === "ok") text.textContent = `Dinleme: ${data.ip}:${data.port}`;
-      else text.textContent = "Hata: " + data.message;
+      if (data.status === "ok") {
+        text.textContent = `Dinleme aktif: ${data.ip}:${data.port}`;
+        text.style.color = "green";
+      } else {
+        text.textContent = "Hata: " + data.message;
+        text.style.color = "red";
+      }
     };
 
     const algoSelect = document.getElementById("algorithmSelect");
@@ -140,13 +159,13 @@
       } else if (algo === "railfence") {
         keyField.style.display = "block";
         keyLabel.textContent = "Anahtar (satır sayısı, örn: 2)";
-      }else if (algo === "route") {
+      } else if (algo === "route") {
         keyField.style.display = "block";
         keyLabel.textContent = "Sütun sayısı (örn: 5)";
-      }else if (algo === "columnar") {
-         keyField.style.display = "block";
-         keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
-      }else {
+      } else if (algo === "columnar") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
+      } else {
         keyField.style.display = "none";
       }
     });
