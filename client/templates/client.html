@@ -48,6 +48,7 @@
           <option value="columnar">Columnar Cipher</option>
           <option value="polybius">Polybius Cipher</option>
           <option value="pigpen">Pigpen Cipher</option>
+          <option value="hill">Hill Cipher</option>
         </select>
       </div>
 
@@ -89,7 +90,7 @@
           </div>
           <div class="bubble">
             <p><b>Şifreli:</b></p>
-            <div>${msg.encrypted.split('|').map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
+            <div>${msg.encrypted.split('|').filter(p => p && p.trim() !== "").map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
             <p><b>Çözülmüş:</b> ${msg.decrypted}</p>
           </div>
         `;
@@ -165,7 +166,11 @@
       } else if (algo === "columnar") {
         keyField.style.display = "block";
         keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
-      } else {
+      }
+      else if (algo === "hill") {
+      keyField.style.display = "block";
+      keyLabel.textContent = "Hill anahtarı (4 sayı, örn: 3 3 2 5)";
+    }  else {
         keyField.style.display = "none";
       }
     });

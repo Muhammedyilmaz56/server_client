@@ -395,3 +395,79 @@ def pigpen_decrypt(cipher):
             ch = p.split("/")[-1].split(".")[0]
             result += ch
     return result
+# --- HILL CIPHER ---
+
+def _hill_parse_key(key_str):
+    """
+    key_str: 2x2 matris için 4 sayı (virgül veya boşlukla ayrılmış)
+    Örn: "3 3 2 5" veya "3,3,2,5"
+    """
+    parts = key_str.replace(",", " ").split()
+    if len(parts) != 4:
+        raise ValueError("Hill anahtarı 4 sayı içermeli (2x2 matris). Örn: '3 3 2 5'")
+
+    nums = []
+    for p in parts:
+        if not p.lstrip("-").isdigit():
+            raise ValueError("Hill anahtarı sadece tam sayılardan oluşmalıdır.")
+        nums.append(int(p) % 26)
+
+    a, b, c, d = nums
+    det = (a * d - b * c) % 26
+    if math.gcd(det, 26) != 1:
+        raise ValueError("Geçersiz Hill anahtarı: determinant 26 ile aralarında asal olmalı.")
+    return a, b, c, d
+
+
+def _hill_inverse_matrix(a, b, c, d):
+    det = (a * d - b * c) % 26
+    det_inv = pow(det, -1, 26)  # mod 26'da ters
+    ia = ( det_inv * d) % 26
+    ib = (-det_inv * b) % 26
+    ic = (-det_inv * c) % 26
+    id = ( det_inv * a) % 26
+    return ia, ib, ic, id
+
+
+def hill_encrypt(text, key):
+  
+    a, b, c, d = _hill_parse_key(key)
+    text = normalize_text(text).lower()
+    letters = [ch for ch in text if ch.isalpha()]
+
+    
+    if len(letters) % 2 == 1:
+        letters.append('x')
+
+    result = []
+    for i in range(0, len(letters), 2):
+        p0 = ord(letters[i])   - ord('a')
+        p1 = ord(letters[i+1]) - ord('a')
+        c0 = (a * p0 + b * p1) % 26
+        c1 = (c * p0 + d * p1) % 26
+        result.append(chr(c0 + ord('A')))
+        result.append(chr(c1 + ord('A')))
+    return "".join(result)
+
+
+def hill_decrypt(cipher, key):
+   
+    a, b, c, d = _hill_parse_key(key)
+    ia, ib, ic, id = _hill_inverse_matrix(a, b, c, d)
+
+    cipher = normalize_text(cipher).lower()
+    letters = [ch for ch in cipher if ch.isalpha()]
+
+  
+    if len(letters) % 2 == 1:
+        letters.append('x')
+
+    result = []
+    for i in range(0, len(letters), 2):
+        c0 = ord(letters[i])   - ord('a')
+        c1 = ord(letters[i+1]) - ord('a')
+        p0 = (ia * c0 + ib * c1) % 26
+        p1 = (ic * c0 + id * c1) % 26
+        result.append(chr(p0 + ord('A')))
+        result.append(chr(p1 + ord('A')))
+    return "".join(result)

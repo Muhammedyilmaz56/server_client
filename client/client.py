@@ -16,13 +16,21 @@ listener_thread = None
 listener_socket = None
 listener_running = False
 
-client_socket = None          # 🔹 Kalıcı bağlantı için global değişken
+client_socket = None
 client_connected = False
 
 
-# ---------------- Şifre Çözme Fonksiyonu ----------------
+LAST_ALGO_SENT = None
+LAST_KEY_SENT = None
+CURRENT_DECRYPT_ALGO = None
+CURRENT_DECRYPT_KEY = None
+
+
+
 def decrypt_message(algorithm, text, key=None):
     try:
+        if not algorithm:
+            return text
         if algorithm == "caesar":
             shift = int(key) if key else 3
             return caesar_decrypt(text, shift)
@@ -55,13 +63,21 @@ def decrypt_message(algorithm, text, key=None):
             return polybius_decrypt(text)
         elif algorithm == "pigpen":
             return pigpen_decrypt(text)
+        elif algorithm == "pigpen":
+            return pigpen_decrypt(text)
+
+        
+        elif algorithm == "hill":
+            key = key if key else "3 3 2 5"   
+            return hill_decrypt(text, key)
+
         else:
             return text
     except Exception as e:
         return f"Hata: {e}"
 
 
-# ---------------- Sunucudan Gelen Mesajları Dinleme ----------------
+
 def start_client_listener(ip, port):
     global listener_thread, listener_socket, listener_running
     if listener_running:
@@ -84,6 +100,7 @@ def start_client_listener(ip, port):
                     if not data:
                         break
 
+                    # 🔹 Server "algo||key||şifreli" formatında gönderir
                     if "||" in data:
                         parts = data.split("||", 2)
                         algorithm = parts[0]
@@ -91,20 +108,20 @@ def start_client_listener(ip, port):
                             key, encrypted_text = parts[1], parts[2]
                         else:
                             key, encrypted_text = None, parts[1]
-                        decrypted = decrypt_message(algorithm, encrypted_text, key)
-                        msg_data = {
-                            "from": "server",
-                            "algorithm": algorithm,
-                            "encrypted": encrypted_text,
-                            "decrypted": decrypted
-                        }
                     else:
-                        msg_data = {
-                            "from": "server",
-                            "algorithm": "plain",
-                            "encrypted": data,
-                            "decrypted": data
-                        }
+                        algorithm = CURRENT_DECRYPT_ALGO
+                        key = CURRENT_DECRYPT_KEY
+                        encrypted_text = data.strip()
+
+                    decrypted = decrypt_message(algorithm, encrypted_text, key)
+
+                    msg_data = {
+                        "from": "server",
+                        "algorithm": algorithm or "unknown",
+                        "key": key or "-",
+                        "encrypted": encrypted_text,
+                        "decrypted": decrypted
+                    }
 
                     incoming_messages.append(msg_data)
                     socketio.emit("incoming_new", msg_data)
@@ -119,19 +136,19 @@ def start_client_listener(ip, port):
     listener_thread.start()
 
 
-# ---------------- Mesaj Gönderme (Kalıcı Bağlantı) ----------------
+# ---------------- Mesaj Gönderme ----------------
 def send_message(ip, port, message, algorithm="caesar", key=None):
-    global client_socket, client_connected
-
+    global client_socket, client_connected, LAST_ALGO_SENT, LAST_KEY_SENT
     try:
-        # 🔹 Bağlantı henüz kurulmadıysa bir kere aç
+        LAST_ALGO_SENT, LAST_KEY_SENT = algorithm, key
+
         if not client_connected:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((ip, int(port)))
             client_connected = True
             print(f"{ip}:{port} adresine bağlantı kuruldu.")
 
-        # 🔹 Mesajı seçilen algoritmayla şifrele
+        # 🔹 Mesajı şifrele
         if algorithm == "caesar":
             shift = int(key) if key else 3
             encrypted = caesar_encrypt(message, shift)
@@ -164,16 +181,20 @@ def send_message(ip, port, message, algorithm="caesar", key=None):
             encrypted = polybius_encrypt(message)
         elif algorithm == "pigpen":
             encrypted = pigpen_encrypt(message)
+        elif algorithm == "hill":
+            key = key if key else "3 3 2 5"   
+            encrypted = hill_encrypt(message, key)
+
         else:
             encrypted = message
 
-        # 🔹 Sunucuya gönder
-        send_data = f"{algorithm}||{key or ''}||{encrypted}"
-        client_socket.send(send_data.encode("utf-8"))
+        # 🔹 Server’a gönder
+        client_socket.send(encrypted.encode("utf-8"))
 
         msg_data = {
             "from": "client",
             "algorithm": algorithm,
+            "key": key or "-",
             "encrypted": encrypted,
             "decrypted": message
         }
@@ -210,7 +231,19 @@ def send_message_ajax():
         return jsonify({"success": False, "response": "Eksik alanlar var!"})
 
     response = send_message(ip, port, message, algorithm, key)
-    return jsonify({"success": True, "response": response})
+
+    
+    success = not str(response).startswith("Hata:")
+    return jsonify({"success": success, "response": response})
+
+
+@app.route("/update_decryption_algo", methods=["POST"])
+def update_decryption_algo():
+    global CURRENT_DECRYPT_ALGO, CURRENT_DECRYPT_KEY
+    CURRENT_DECRYPT_ALGO = request.form.get("algorithm")
+    CURRENT_DECRYPT_KEY = request.form.get("key")
+    print(f"Client çözüm algoritması güncellendi: {CURRENT_DECRYPT_ALGO} ({CURRENT_DECRYPT_KEY})")
+    return jsonify({"status": "ok", "algorithm": CURRENT_DECRYPT_ALGO})
 
 
 @app.route("/clear", methods=["POST"])

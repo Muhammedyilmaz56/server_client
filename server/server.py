@@ -10,12 +10,14 @@ socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
 
 CURRENT_IP = None
 CURRENT_PORT = None
+LAST_ALGO = None
+LAST_KEY = None
+
 messages = []
 server_socket = None
 server_running = False
 
 
-# ---------------- Şifre Çözme ----------------
 def decrypt_message(algorithm, text, key=None):
     try:
         if algorithm == "caesar":
@@ -50,13 +52,15 @@ def decrypt_message(algorithm, text, key=None):
             return polybius_decrypt(text)
         elif algorithm == "pigpen":
             return pigpen_decrypt(text)
+        elif algorithm == "hill":
+            key = key if key else "3 3 2 5"   
+            return hill_decrypt(text, key)
         else:
             return text
     except Exception as e:
         return f"Hata: {e}"
 
 
-# ---------------- Sunucu Başlatma ----------------
 def start_socket_server(ip, port):
     global server_socket, server_running
     if server_running:
@@ -78,41 +82,35 @@ def start_socket_server(ip, port):
                 client_ip, client_port = addr
                 print(f"Yeni bağlantı: {client_ip}:{client_port}")
 
-                # 🔹 Aynı bağlantı açık kaldığı sürece sürekli dinle
                 while True:
                     try:
-                        data = conn.recv(4096).decode("utf-8", errors="replace")
+                        data = conn.recv(4096)
                         if not data:
-                            break  # bağlantı kapatıldıysa çık
+                            break
+                        encrypted_text = data.decode("utf-8", errors="replace").strip()
                     except ConnectionResetError:
                         break
 
-                    if "||" in data:
-                        parts = data.split("||", 2)
-                        algorithm = parts[0]
-                        if len(parts) == 3:
-                            key, encrypted_text = parts[1], parts[2]
-                        else:
-                            key, encrypted_text = None, parts[1]
-                        decrypted_text = decrypt_message(algorithm, encrypted_text, key)
-                        payload = data
+                    if LAST_ALGO:
+                        decrypted_text = decrypt_message(LAST_ALGO, encrypted_text, LAST_KEY)
+                        algo_label = LAST_ALGO
                     else:
-                        algorithm = "plain"
-                        payload = data
-                        decrypted_text = data
+                        decrypted_text = encrypted_text
+                        algo_label = ""
 
                     new_message = {
                         "direction": "Client → Server",
-                        "algorithm": algorithm,
-                        "encrypted": payload,
+                        "algorithm": algo_label,
+                        "encrypted": encrypted_text,
                         "decrypted": decrypted_text
                     }
                     messages.append(new_message)
                     socketio.emit('new_message', new_message)
 
-                    # 🔹 Sunucu cevabı gönder
-                    response = f"Sunucu cevabı: {decrypted_text}"
-                    conn.send(response.encode("utf-8"))
+                    try:
+                        conn.send(b"OK")
+                    except:
+                        pass
 
                 conn.close()
                 print(f"Bağlantı kapandı: {client_ip}:{client_port}")
@@ -132,7 +130,6 @@ def start_socket_server(ip, port):
     t.start()
 
 
-# ---------------- Sunucudan İstemciye Mesaj Gönder ----------------
 def send_to_client(ip, port, message, algorithm="caesar", key=None):
     try:
         if algorithm == "caesar":
@@ -167,6 +164,9 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
             encrypted = polybius_encrypt(message)
         elif algorithm == "pigpen":
             encrypted = pigpen_encrypt(message)
+        elif algorithm == "hill":
+            key = key if key else "3 3 2 5"
+            encrypted = hill_encrypt(message, key)
         else:
             encrypted = message
 
@@ -184,13 +184,13 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
         }
         messages.append(new_message)
         socketio.emit('new_message', new_message)
-        return True
+        return True, None  
     except Exception as e:
         print("Gönderim hatası:", e)
-        return False
+        return False, str(e)  
 
 
-# ---------------- Flask Routes ----------------
+
 @app.route("/")
 def index():
     return render_template("server.html", started=server_running, ip=CURRENT_IP, port=CURRENT_PORT)
@@ -214,8 +214,21 @@ def send_message():
     msg = request.form["message"]
     algorithm = request.form.get("algorithm", "caesar")
     key = request.form.get("key")
-    success = send_to_client(ip, port, msg, algorithm, key)
-    return jsonify({"success": success})
+
+    success, error = send_to_client(ip, port, msg, algorithm, key)
+    return jsonify({"success": success, "error": error})
+
+@app.route("/send_message", methods=["POST"])
+def send_message_legacy():
+    return send_message()
+
+
+@app.route("/update_last_algo", methods=["POST"])
+def update_last_algo():
+    global LAST_ALGO, LAST_KEY
+    LAST_ALGO = request.form.get("algorithm")
+    LAST_KEY = request.form.get("key")
+    return jsonify({"status": "ok", "algorithm": LAST_ALGO})
 
 
 @socketio.on("connect")

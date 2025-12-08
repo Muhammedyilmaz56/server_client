@@ -48,6 +48,7 @@
           <option value="columnar">Columnar Cipher</option>
           <option value="polybius">Polybius Cipher</option>
           <option value="pigpen">Pigpen Cipher</option>
+          <option value="hill">Hill Cipher</option>
 
 
 
@@ -104,7 +105,7 @@
   if (m.direction === "Server → Client") div.classList.add("from-server");
   else div.classList.add("from-client");
 
-  // Pigpen gibi görsel tabanlı mesajları destekler
+  
   if (m.algorithm === "pigpen") {
     div.innerHTML = `
       <div class="meta">
@@ -113,7 +114,7 @@
       </div>
       <div class="bubble">
         <p><b>Şifreli:</b></p>
-        <div>${m.encrypted.split('|').map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
+        <div>${m.encrypted.split('|').filter(p => p && p.trim() !== "").map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
         <p><b>Çözülmüş:</b> ${m.decrypted}</p>
       </div>
     `;
@@ -159,6 +160,10 @@
       }else if (algo === "route") {
         keyField.style.display = "block";
         keyLabel.textContent = "Sütun sayısı (örn: 5)";
+      }
+      else if (algo === "hill") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Hill anahtarı (4 sayı, örn: 3 3 2 5)";
       }else if (algo === "columnar") {
          keyField.style.display = "block";
          keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
@@ -188,29 +193,35 @@
     };
 
     document.getElementById("sendBtn").onclick = async () => {
-      const ip = document.getElementById("clientIP").value.trim();
-      const port = document.getElementById("clientPort").value.trim();
-      const msg = document.getElementById("messageInput").value.trim();
-      const algo = document.getElementById("algorithmSelect").value;
-      const key = document.getElementById("keyInput").value.trim();
-      if (!ip || !port || !msg) return showToast("Tüm alanları doldurun!", "error");
+  const ip = document.getElementById("clientIP").value.trim();
+  const port = document.getElementById("clientPort").value.trim();
+  const msg = document.getElementById("messageInput").value.trim();
+  const algo = document.getElementById("algorithmSelect").value;
+  const key = document.getElementById("keyInput").value.trim();
+  if (!ip || !port || !msg) return showToast("Tüm alanları doldurun!", "error");
 
-      const form = new FormData();
-      form.append("ip", ip);
-      form.append("port", port);
-      form.append("message", msg);
-      form.append("algorithm", algo);
-      if (key) form.append("key", key);
+  const form = new FormData();
+  form.append("ip", ip);
+  form.append("port", port);
+  form.append("message", msg);
+  form.append("algorithm", algo);
+  if (key) form.append("key", key);
 
-      const res = await fetch("/send", { method: "POST", body: form });
-      const data = await res.json();
-      if (data.success) showToast("Mesaj gönderildi!");
-      else showToast("Gönderim hatası: Client çevrimdışı olabilir.", "error");
-    };
+  try {
+    const res = await fetch("/send", { method: "POST", body: form });
+    const data = await res.json();
 
-    document.getElementById("clearBtn").onclick = () => {
-      socket.emit("clear_messages");
-    };
+    if (data.success) {
+      showToast("Mesaj gönderildi!");
+    } else {
+      const errText = data.error || "Bilinmeyen bir hata oluştu.";
+      showToast("Gönderim hatası: " + errText, "error");
+    }
+  } catch (e) {
+    showToast("İstek gönderilemedi: " + e, "error");
+  }
+};
+
   </script>
 </body>
 </html>
