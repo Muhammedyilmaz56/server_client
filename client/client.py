@@ -19,27 +19,27 @@ listener_running = False
 client_socket = None
 client_connected = False
 
-
-LAST_ALGO_SENT = None
-LAST_KEY_SENT = None
 CURRENT_DECRYPT_ALGO = None
 CURRENT_DECRYPT_KEY = None
-
 
 
 def decrypt_message(algorithm, text, key=None):
     try:
         if not algorithm:
             return text
+
         if algorithm == "caesar":
             shift = int(key) if key else 3
             return caesar_decrypt(text, shift)
+
         elif algorithm == "vigenere":
             key = key if key else "anahtar"
             return vigenere_decrypt(text, key)
+
         elif algorithm == "substitution":
             key_map = {chr(97 + i): chr(97 + ((i + 5) % 26)) for i in range(26)}
             return substitution_decrypt(text, key_map)
+
         elif algorithm == "affine":
             if not key or "," not in key:
                 return "Hatalı affine anahtarı!"
@@ -47,35 +47,44 @@ def decrypt_message(algorithm, text, key=None):
             if math.gcd(a, 26) != 1:
                 return f"a={a} 26 ile aralarında asal değil!"
             return affine_decrypt(text, a, b)
+
         elif algorithm == "playfair":
             key = key if key else "monarchy"
             return playfair_decrypt(text, key)
+
         elif algorithm == "railfence":
             key = int(key) if key else 2
             return rail_fence_decrypt(text, key)
+
         elif algorithm == "route":
             cols = int(key) if key else 5
             return route_decrypt(text, cols)
+
         elif algorithm == "columnar":
             key = key if key else "TRUVA"
             return columnar_decrypt(text, key)
+
         elif algorithm == "polybius":
             return polybius_decrypt(text)
-        elif algorithm == "pigpen":
-            return pigpen_decrypt(text)
+
         elif algorithm == "pigpen":
             return pigpen_decrypt(text)
 
-        
         elif algorithm == "hill":
-            key = key if key else "3 3 2 5"   
+            key = key if key else "3 3 2 5"
             return hill_decrypt(text, key)
+
+       
+       
+        elif algorithm == "des":
+            key = key if key else "despass1"
+            return des_decrypt_message(text, key)
 
         else:
             return text
+
     except Exception as e:
         return f"Hata: {e}"
-
 
 
 def start_client_listener(ip, port):
@@ -88,6 +97,7 @@ def start_client_listener(ip, port):
         global listener_socket, listener_running
         try:
             listener_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            listener_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             listener_socket.bind(("0.0.0.0", int(port)))
             listener_socket.listen(5)
             listener_running = True
@@ -95,23 +105,25 @@ def start_client_listener(ip, port):
 
             while True:
                 conn, addr = listener_socket.accept()
+
                 while True:
-                    data = conn.recv(4096).decode("utf-8", errors="replace")
-                    if not data:
+                    raw = conn.recv(4096)
+                    if not raw:
                         break
 
-                    # 🔹 Server "algo||key||şifreli" formatında gönderir
-                    if "||" in data:
-                        parts = data.split("||", 2)
-                        algorithm = parts[0]
-                        if len(parts) == 3:
-                            key, encrypted_text = parts[1], parts[2]
-                        else:
-                            key, encrypted_text = None, parts[1]
-                    else:
-                        algorithm = CURRENT_DECRYPT_ALGO
-                        key = CURRENT_DECRYPT_KEY
-                        encrypted_text = data.strip()
+                    data = raw.decode("utf-8", errors="replace").strip()
+
+                   
+                   
+                    algorithm = CURRENT_DECRYPT_ALGO
+                    key = CURRENT_DECRYPT_KEY
+                    encrypted_text = data
+
+                    parts = data.split("||", 2)
+                    if len(parts) == 3:
+                        algorithm, key, encrypted_text = parts[0], parts[1], parts[2]
+                        if key == "":
+                            key = None
 
                     decrypted = decrypt_message(algorithm, encrypted_text, key)
 
@@ -127,6 +139,7 @@ def start_client_listener(ip, port):
                     socketio.emit("incoming_new", msg_data)
 
                 conn.close()
+
         except OSError as e:
             print(f"Listener başlatılamadı: {e}")
         finally:
@@ -136,28 +149,29 @@ def start_client_listener(ip, port):
     listener_thread.start()
 
 
-# ---------------- Mesaj Gönderme ----------------
 def send_message(ip, port, message, algorithm="caesar", key=None):
-    global client_socket, client_connected, LAST_ALGO_SENT, LAST_KEY_SENT
+    global client_socket, client_connected
     try:
-        LAST_ALGO_SENT, LAST_KEY_SENT = algorithm, key
-
         if not client_connected:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((ip, int(port)))
             client_connected = True
             print(f"{ip}:{port} adresine bağlantı kuruldu.")
 
-        # 🔹 Mesajı şifrele
+        
+        
         if algorithm == "caesar":
             shift = int(key) if key else 3
             encrypted = caesar_encrypt(message, shift)
+
         elif algorithm == "vigenere":
             key = key if key else "anahtar"
             encrypted = vigenere_encrypt(message, key)
+
         elif algorithm == "substitution":
             key_map = {chr(97 + i): chr(97 + ((i + 5) % 26)) for i in range(26)}
             encrypted = substitution_encrypt(message, key_map)
+
         elif algorithm == "affine":
             if not key or "," not in key:
                 raise ValueError("Affine anahtarı a,b şeklinde olmalı!")
@@ -165,31 +179,46 @@ def send_message(ip, port, message, algorithm="caesar", key=None):
             if math.gcd(a, 26) != 1:
                 raise ValueError(f"a={a} 26 ile aralarında asal değil!")
             encrypted = affine_encrypt(message, a, b)
+
         elif algorithm == "playfair":
             key = key if key else "monarchy"
             encrypted = playfair_encrypt(message, key)
+
         elif algorithm == "railfence":
             key = int(key) if key else 2
             encrypted = rail_fence_encrypt(message, key)
+
         elif algorithm == "route":
             cols = int(key) if key else 5
             encrypted = route_encrypt(message, cols)
+
         elif algorithm == "columnar":
             key = key if key else "TRUVA"
             encrypted = columnar_encrypt(message, key)
+
         elif algorithm == "polybius":
             encrypted = polybius_encrypt(message)
+
         elif algorithm == "pigpen":
             encrypted = pigpen_encrypt(message)
+
         elif algorithm == "hill":
-            key = key if key else "3 3 2 5"   
+            key = key if key else "3 3 2 5"
             encrypted = hill_encrypt(message, key)
+
+        
+        
+        elif algorithm == "des":
+            key = key if key else "despass1"
+            encrypted = des_encrypt_message(message, key)
 
         else:
             encrypted = message
 
-        # 🔹 Server’a gönder
-        client_socket.send(encrypted.encode("utf-8"))
+       
+       
+        payload = f"{algorithm}||{key or ''}||{encrypted}"
+        client_socket.send(payload.encode("utf-8"))
 
         msg_data = {
             "from": "client",
@@ -201,11 +230,11 @@ def send_message(ip, port, message, algorithm="caesar", key=None):
         incoming_messages.append(msg_data)
         socketio.emit("incoming_new", msg_data)
         return "Mesaj gönderildi."
+
     except Exception as e:
         return f"Hata: {str(e)}"
 
 
-# ---------------- Flask Routes ----------------
 @app.route("/update_config", methods=["POST"])
 def update_config():
     global CURRENT_IP, CURRENT_PORT
@@ -213,6 +242,7 @@ def update_config():
     CURRENT_PORT = request.form.get("port")
     if not CURRENT_IP or not CURRENT_PORT:
         return jsonify({"status": "error", "message": "IP veya Port eksik!"})
+
     CURRENT_PORT = int(CURRENT_PORT)
     print(f"Dinleme başlatıldı: {CURRENT_IP}:{CURRENT_PORT}")
     start_client_listener(CURRENT_IP, CURRENT_PORT)
@@ -231,8 +261,6 @@ def send_message_ajax():
         return jsonify({"success": False, "response": "Eksik alanlar var!"})
 
     response = send_message(ip, port, message, algorithm, key)
-
-    
     success = not str(response).startswith("Hata:")
     return jsonify({"success": success, "response": response})
 

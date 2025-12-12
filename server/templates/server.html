@@ -49,6 +49,8 @@
           <option value="polybius">Polybius Cipher</option>
           <option value="pigpen">Pigpen Cipher</option>
           <option value="hill">Hill Cipher</option>
+          <option value="des">DES Kütüphanesiz</option>
+
 
 
 
@@ -167,7 +169,12 @@
       }else if (algo === "columnar") {
          keyField.style.display = "block";
          keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
-      } else {
+        } else if (algo === "des") {
+  keyField.style.display = "block";
+  keyLabel.textContent = "DES Parolası (örn: despass1)";
+}
+
+      else {
         keyField.style.display = "none";
       }
     });
@@ -193,34 +200,52 @@
     };
 
     document.getElementById("sendBtn").onclick = async () => {
-  const ip = document.getElementById("clientIP").value.trim();
-  const port = document.getElementById("clientPort").value.trim();
-  const msg = document.getElementById("messageInput").value.trim();
-  const algo = document.getElementById("algorithmSelect").value;
-  const key = document.getElementById("keyInput").value.trim();
-  if (!ip || !port || !msg) return showToast("Tüm alanları doldurun!", "error");
+      const ip = document.getElementById("clientIP").value.trim();
+      const port = document.getElementById("clientPort").value.trim();
+      const msg = document.getElementById("messageInput").value.trim();
+      const algo = document.getElementById("algorithmSelect").value;
+      const key = document.getElementById("keyInput").value.trim();
 
-  const form = new FormData();
-  form.append("ip", ip);
-  form.append("port", port);
-  form.append("message", msg);
-  form.append("algorithm", algo);
-  if (key) form.append("key", key);
+      
+      if (!ip || !port || !msg) return showToast("Lütfen IP, Port ve Mesaj alanlarını doldurun!", "error");
+      if (!algo) return showToast("Lütfen bir şifreleme algoritması seçin!", "error");
 
-  try {
-    const res = await fetch("/send", { method: "POST", body: form });
-    const data = await res.json();
+      const form = new FormData();
+      form.append("ip", ip);
+      form.append("port", port);
+      form.append("message", msg);
+      form.append("algorithm", algo);
+      if (key) form.append("key", key);
 
-    if (data.success) {
-      showToast("Mesaj gönderildi!");
-    } else {
-      const errText = data.error || "Bilinmeyen bir hata oluştu.";
-      showToast("Gönderim hatası: " + errText, "error");
-    }
-  } catch (e) {
-    showToast("İstek gönderilemedi: " + e, "error");
-  }
-};
+      try {
+        const res = await fetch("/send", { method: "POST", body: form });
+
+      
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+            
+            throw new Error("Şifreleme sırasında bir hata oluştu (Anahtar veya matris uyumsuzluğu olabilir).");
+        }
+
+        const data = await res.json();
+
+        if (data.success) {
+          showToast("Mesaj başarıyla gönderildi!", "success");
+        } else {
+          
+          const errText = data.error || "Bilinmeyen bir hata oluştu.";
+          showToast("Hata: " + errText, "error");
+        }
+      } catch (e) {
+        
+        console.error(e);
+        
+        let userMsg = e.message;
+        if(userMsg.includes("Failed to fetch")) userMsg = "Sunucuya ulaşılamadı.";
+        
+        showToast(userMsg, "error");
+      }
+    };
 
   </script>
 </body>

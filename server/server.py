@@ -10,8 +10,6 @@ socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
 
 CURRENT_IP = None
 CURRENT_PORT = None
-LAST_ALGO = None
-LAST_KEY = None
 
 messages = []
 server_socket = None
@@ -23,12 +21,15 @@ def decrypt_message(algorithm, text, key=None):
         if algorithm == "caesar":
             shift = int(key) if key else 3
             return caesar_decrypt(text, shift)
+
         elif algorithm == "vigenere":
             key = key if key else "anahtar"
             return vigenere_decrypt(text, key)
+
         elif algorithm == "substitution":
             key_map = {chr(97 + i): chr(97 + ((i + 5) % 26)) for i in range(26)}
             return substitution_decrypt(text, key_map)
+
         elif algorithm == "affine":
             if not key or "," not in key:
                 return "Hatalı affine anahtarı"
@@ -36,27 +37,41 @@ def decrypt_message(algorithm, text, key=None):
             if math.gcd(a, 26) != 1:
                 return f"a={a} 26 ile aralarında asal değil!"
             return affine_decrypt(text, a, b)
+
         elif algorithm == "playfair":
             key = key if key else "monarchy"
             return playfair_decrypt(text, key)
+
         elif algorithm == "railfence":
             key = int(key) if key else 2
             return rail_fence_decrypt(text, key)
+
         elif algorithm == "route":
             cols = int(key) if key else 5
             return route_decrypt(text, cols)
+
         elif algorithm == "columnar":
             key = key if key else "TRUVA"
             return columnar_decrypt(text, key)
+
         elif algorithm == "polybius":
             return polybius_decrypt(text)
+
         elif algorithm == "pigpen":
             return pigpen_decrypt(text)
+
         elif algorithm == "hill":
-            key = key if key else "3 3 2 5"   
+            key = key if key else "3 3 2 5"
             return hill_decrypt(text, key)
+
+       
+        elif algorithm == "des":
+            key = key if key else "despass1"
+            return des_decrypt_message(text, key)
+
         else:
             return text
+
     except Exception as e:
         return f"Hata: {e}"
 
@@ -87,21 +102,27 @@ def start_socket_server(ip, port):
                         data = conn.recv(4096)
                         if not data:
                             break
-                        encrypted_text = data.decode("utf-8", errors="replace").strip()
+                        payload = data.decode("utf-8", errors="replace").strip()
                     except ConnectionResetError:
                         break
 
-                    if LAST_ALGO:
-                        decrypted_text = decrypt_message(LAST_ALGO, encrypted_text, LAST_KEY)
-                        algo_label = LAST_ALGO
-                    else:
-                        decrypted_text = encrypted_text
-                        algo_label = ""
+                    
+                    algo_label = ""
+                    key_used = None
+                    cipher_text = payload
+
+                    parts = payload.split("||", 2)
+                    if len(parts) == 3:
+                        algo_label, key_used, cipher_text = parts[0], parts[1], parts[2]
+                        if key_used == "":
+                            key_used = None
+
+                    decrypted_text = decrypt_message(algo_label, cipher_text, key_used)
 
                     new_message = {
                         "direction": "Client → Server",
                         "algorithm": algo_label,
-                        "encrypted": encrypted_text,
+                        "encrypted": cipher_text,
                         "decrypted": decrypted_text
                     }
                     messages.append(new_message)
@@ -135,12 +156,15 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
         if algorithm == "caesar":
             shift = int(key) if key else 3
             encrypted = caesar_encrypt(message, shift)
+
         elif algorithm == "vigenere":
             key = key if key else "anahtar"
             encrypted = vigenere_encrypt(message, key)
+
         elif algorithm == "substitution":
             key_map = {chr(97 + i): chr(97 + ((i + 5) % 26)) for i in range(26)}
             encrypted = substitution_encrypt(message, key_map)
+
         elif algorithm == "affine":
             if not key or "," not in key:
                 raise ValueError("Affine anahtarı a,b şeklinde olmalı")
@@ -148,25 +172,38 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
             if math.gcd(a, 26) != 1:
                 raise ValueError(f"a={a} 26 ile aralarında asal değil!")
             encrypted = affine_encrypt(message, a, b)
+
         elif algorithm == "playfair":
             key = key if key else "monarchy"
             encrypted = playfair_encrypt(message, key)
+
         elif algorithm == "railfence":
             key = int(key) if key else 2
             encrypted = rail_fence_encrypt(message, key)
+
         elif algorithm == "route":
             cols = int(key) if key else 5
             encrypted = route_encrypt(message, cols)
+
         elif algorithm == "columnar":
             key = key if key else "TRUVA"
             encrypted = columnar_encrypt(message, key)
+
         elif algorithm == "polybius":
             encrypted = polybius_encrypt(message)
+
         elif algorithm == "pigpen":
             encrypted = pigpen_encrypt(message)
+
         elif algorithm == "hill":
             key = key if key else "3 3 2 5"
             encrypted = hill_encrypt(message, key)
+
+       
+        elif algorithm == "des":
+            key = key if key else "despass1"
+            encrypted = des_encrypt_message(message, key)
+
         else:
             encrypted = message
 
@@ -184,11 +221,11 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
         }
         messages.append(new_message)
         socketio.emit('new_message', new_message)
-        return True, None  
+        return True, None
+
     except Exception as e:
         print("Gönderim hatası:", e)
-        return False, str(e)  
-
+        return False, str(e)
 
 
 @app.route("/")
@@ -218,17 +255,10 @@ def send_message():
     success, error = send_to_client(ip, port, msg, algorithm, key)
     return jsonify({"success": success, "error": error})
 
+
 @app.route("/send_message", methods=["POST"])
 def send_message_legacy():
     return send_message()
-
-
-@app.route("/update_last_algo", methods=["POST"])
-def update_last_algo():
-    global LAST_ALGO, LAST_KEY
-    LAST_ALGO = request.form.get("algorithm")
-    LAST_KEY = request.form.get("key")
-    return jsonify({"status": "ok", "algorithm": LAST_ALGO})
 
 
 @socketio.on("connect")

@@ -1,5 +1,7 @@
 import math
 import os
+from des_from_scratch import des_encrypt_message, des_decrypt_message
+
 
 def safe_char(c):
     turkish_chars = "çğıöşüÇĞİÖŞÜ"
@@ -395,7 +397,7 @@ def pigpen_decrypt(cipher):
             ch = p.split("/")[-1].split(".")[0]
             result += ch
     return result
-# --- HILL CIPHER ---
+
 
 def _hill_parse_key(key_str):
     """
@@ -421,7 +423,7 @@ def _hill_parse_key(key_str):
 
 def _hill_inverse_matrix(a, b, c, d):
     det = (a * d - b * c) % 26
-    det_inv = pow(det, -1, 26)  # mod 26'da ters
+    det_inv = pow(det, -1, 26)  
     ia = ( det_inv * d) % 26
     ib = (-det_inv * b) % 26
     ic = (-det_inv * c) % 26
@@ -471,3 +473,4 @@ def hill_decrypt(cipher, key):
         result.append(chr(p0 + ord('A')))
         result.append(chr(p1 + ord('A')))
     return "".join(result)
+
