@@ -82,6 +82,14 @@ def decrypt_message(algorithm, text, key=None):
         elif algorithm == "des_lib":
             key = key if key else "despass1"
             return des_decrypt_message_lib(text, key)
+        elif algorithm == "aes":
+            key = key if key else "aespass123"
+            return aes_decrypt_message(text, key)
+
+        elif algorithm == "aes_lib":
+            key = key if key else "aespass123"
+            return aes_decrypt_message_lib(text, key)
+
 
 
         else:
@@ -218,7 +226,14 @@ def send_message(ip, port, message, algorithm="caesar", key=None):
         elif algorithm == "des_lib":
             key = key if key else "despass1"
             encrypted = des_encrypt_message_lib(message, key)
-    
+        elif algorithm == "aes":
+            key = key if key else "aespass123"
+            encrypted = aes_encrypt_message(message, key)
+
+        elif algorithm == "aes_lib":
+            key = key if key else "aespass123"
+            encrypted = aes_encrypt_message_lib(message, key)
+
 
         else:
             encrypted = message

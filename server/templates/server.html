@@ -51,7 +51,8 @@
           <option value="hill">Hill Cipher</option>
           <option value="des">DES (Kütüphanesiz)</option>
           <option value="des_lib">DES (Kütüphaneli)</option>
-
+          <option value="aes">AES-128 (Manuel)</option>
+          <option value="aes_lib">AES-128 (Kütüphaneli)</option>
 
 
 
@@ -178,6 +179,11 @@
   keyField.style.display = "block";
   keyLabel.textContent = "DES Parolası (örn: despass1)";
 }
+else if (algo === "aes" || algo === "aes_lib") {
+  keyField.style.display = "block";
+  keyLabel.textContent = "AES Anahtarı (16 byte/parola, örn: aespass123)";
+}
+
 
 
       else {

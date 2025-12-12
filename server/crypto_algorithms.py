@@ -3,6 +3,8 @@ import os
 from des_from_scratch import des_encrypt_message, des_decrypt_message
 
 from des_with_library import des_encrypt_message_lib, des_decrypt_message_lib
+from aes_from_scratch import aes_encrypt_message, aes_decrypt_message
+from aes_with_library import aes_encrypt_message_lib, aes_decrypt_message_lib
 
 def safe_char(c):
     turkish_chars = "çğıöşüÇĞİÖŞÜ"
