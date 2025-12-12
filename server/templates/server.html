@@ -53,10 +53,7 @@
           <option value="des_lib">DES (Kütüphaneli)</option>
           <option value="aes">AES-128 (Manuel)</option>
           <option value="aes_lib">AES-128 (Kütüphaneli)</option>
-
-
-
-
+          <option value="aes_session">AES (RSA ile dağıtılan anahtar)</option>
         </select>
       </div>
 
@@ -103,43 +100,41 @@
     });
 
     function addMessage(m) {
-  const box = document.getElementById("chatBox");
-  const div = document.createElement("div");
-  div.classList.add("chat-message");
+      const box = document.getElementById("chatBox");
+      const div = document.createElement("div");
+      div.classList.add("chat-message");
 
-  if (m.direction === "Server → Client") div.classList.add("from-server");
-  else div.classList.add("from-client");
+      if (m.direction === "Server → Client") div.classList.add("from-server");
+      else div.classList.add("from-client");
 
-  
-  if (m.algorithm === "pigpen") {
-    div.innerHTML = `
-      <div class="meta">
-        <b>${m.direction}</b> 
-        <small>(${m.algorithm})</small>
-      </div>
-      <div class="bubble">
-        <p><b>Şifreli:</b></p>
-        <div>${m.encrypted.split('|').filter(p => p && p.trim() !== "").map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
-        <p><b>Çözülmüş:</b> ${m.decrypted}</p>
-      </div>
-    `;
-  } else {
-    div.innerHTML = `
-      <div class="meta">
-        <b>${m.direction}</b> 
-        <small>(${m.algorithm})</small>
-      </div>
-      <div class="bubble">
-        <p><b>Şifreli:</b> ${m.encrypted}</p>
-        <p><b>Çözülmüş:</b> ${m.decrypted}</p>
-      </div>
-    `;
-  }
+      if (m.algorithm === "pigpen") {
+        div.innerHTML = `
+          <div class="meta">
+            <b>${m.direction}</b>
+            <small>(${m.algorithm})</small>
+          </div>
+          <div class="bubble">
+            <p><b>Şifreli:</b></p>
+            <div>${m.encrypted.split('|').filter(p => p && p.trim() !== "").map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
+            <p><b>Çözülmüş:</b> ${m.decrypted}</p>
+          </div>
+        `;
+      } else {
+        div.innerHTML = `
+          <div class="meta">
+            <b>${m.direction}</b>
+            <small>(${m.algorithm})</small>
+          </div>
+          <div class="bubble">
+            <p><b>Şifreli:</b> ${m.encrypted}</p>
+            <p><b>Çözülmüş:</b> ${m.decrypted}</p>
+          </div>
+        `;
+      }
 
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
-
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
 
     const algoSelect = document.getElementById("algorithmSelect");
     const keyField = document.getElementById("keyField");
@@ -147,6 +142,7 @@
 
     algoSelect.addEventListener("change", () => {
       const algo = algoSelect.value;
+
       if (algo === "caesar") {
         keyField.style.display = "block";
         keyLabel.textContent = "Anahtar (örn: 3)";
@@ -162,31 +158,24 @@
       } else if (algo === "railfence") {
         keyField.style.display = "block";
         keyLabel.textContent = "Anahtar (satır sayısı, örn: 2)";
-      }else if (algo === "route") {
+      } else if (algo === "route") {
         keyField.style.display = "block";
         keyLabel.textContent = "Sütun sayısı (örn: 5)";
-      }
-      else if (algo === "hill") {
+      } else if (algo === "hill") {
         keyField.style.display = "block";
         keyLabel.textContent = "Hill anahtarı (4 sayı, örn: 3 3 2 5)";
-      }else if (algo === "columnar") {
-         keyField.style.display = "block";
-         keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
-        } else if (algo === "des") {
-  keyField.style.display = "block";
-  keyLabel.textContent = "DES Parolası (örn: despass1)";
-} else if (algo === "des_lib") {
-  keyField.style.display = "block";
-  keyLabel.textContent = "DES Parolası (örn: despass1)";
-}
-else if (algo === "aes" || algo === "aes_lib") {
-  keyField.style.display = "block";
-  keyLabel.textContent = "AES Anahtarı (16 byte/parola, örn: aespass123)";
-}
-
-
-
-      else {
+      } else if (algo === "columnar") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
+      } else if (algo === "des" || algo === "des_lib") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "DES Parolası (örn: despass1)";
+      } else if (algo === "aes" || algo === "aes_lib") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "AES Anahtarı (16 byte/parola, örn: aespass123)";
+      } else if (algo === "aes_session") {
+        keyField.style.display = "none";
+      } else {
         keyField.style.display = "none";
       }
     });
@@ -203,6 +192,7 @@ else if (algo === "aes" || algo === "aes_lib") {
       const status = document.getElementById("statusText");
       if (data.success) {
         status.textContent = `Server aktif: ${data.ip}:${data.port}`;
+        status.style.color = "green";
         showToast("Server başarıyla başlatıldı!");
       } else {
         status.textContent = "Hata: " + (data.error || "Başlatılamadı");
@@ -218,7 +208,6 @@ else if (algo === "aes" || algo === "aes_lib") {
       const algo = document.getElementById("algorithmSelect").value;
       const key = document.getElementById("keyInput").value.trim();
 
-      
       if (!ip || !port || !msg) return showToast("Lütfen IP, Port ve Mesaj alanlarını doldurun!", "error");
       if (!algo) return showToast("Lütfen bir şifreleme algoritması seçin!", "error");
 
@@ -227,38 +216,34 @@ else if (algo === "aes" || algo === "aes_lib") {
       form.append("port", port);
       form.append("message", msg);
       form.append("algorithm", algo);
-      if (key) form.append("key", key);
+      if (key && algo !== "aes_session") form.append("key", key);
 
       try {
         const res = await fetch("/send", { method: "POST", body: form });
-
-      
         const contentType = res.headers.get("content-type");
         if (!res.ok || !contentType || !contentType.includes("application/json")) {
-            
-            throw new Error("Şifreleme sırasında bir hata oluştu (Anahtar veya matris uyumsuzluğu olabilir).");
+          throw new Error("Şifreleme sırasında bir hata oluştu.");
         }
 
         const data = await res.json();
 
         if (data.success) {
           showToast("Mesaj başarıyla gönderildi!", "success");
+          document.getElementById("messageInput").value = "";
         } else {
-          
-          const errText = data.error || "Bilinmeyen bir hata oluştu.";
-          showToast("Hata: " + errText, "error");
+          showToast("Hata: " + (data.error || "Bilinmeyen hata"), "error");
         }
       } catch (e) {
-        
         console.error(e);
-        
         let userMsg = e.message;
-        if(userMsg.includes("Failed to fetch")) userMsg = "Sunucuya ulaşılamadı.";
-        
+        if (userMsg.includes("Failed to fetch")) userMsg = "Sunucuya ulaşılamadı.";
         showToast(userMsg, "error");
       }
     };
 
+    document.getElementById("clearBtn").onclick = async () => {
+      await fetch("/clear_messages", { method: "POST" });
+    };
   </script>
 </body>
 </html>

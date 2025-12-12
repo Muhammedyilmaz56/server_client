@@ -25,6 +25,20 @@
     </div>
 
     <div class="form-card">
+      <h3>RSA ile AES Oturum Anahtarı Kur</h3>
+      <div class="field">
+        <label>Server HTTP:</label>
+        <input type="text" id="serverHttp" value="http://127.0.0.1:5000" placeholder="örn: http://127.0.0.1:5000">
+      </div>
+      <div class="field">
+        <label>AES Şifre:</label>
+        <input type="text" id="aesSessionPass" placeholder="örn: aespass123">
+      </div>
+      <button id="rsaSetupBtn" class="btn-send">RSA Kur</button>
+      <p id="rsaStatusText" style="color:orange;font-weight:bold;margin-top:10px;"></p>
+    </div>
+
+    <div class="form-card">
       <h3>Mesaj Gönder</h3>
       <div class="field">
         <label>Sunucu IP:</label>
@@ -53,7 +67,7 @@
           <option value="des_lib">DES (Kütüphaneli)</option>
           <option value="aes">AES-128 (Manuel)</option>
           <option value="aes_lib">AES-128 (Kütüphaneli)</option>
-
+          <option value="aes_session">AES (RSA ile dağıtılan anahtar)</option>
         </select>
       </div>
 
@@ -78,6 +92,7 @@
 
   <script>
     const socket = io();
+    let rsaReady = false;
 
     function addMessage(msg) {
       const box = document.getElementById("chatBox");
@@ -90,7 +105,7 @@
       if (msg.algorithm === "pigpen") {
         div.innerHTML = `
           <div class="meta">
-            <b>${msg.from === "client" ? "Client" : "Server"}</b> 
+            <b>${msg.from === "client" ? "Client" : "Server"}</b>
             <small>(${msg.algorithm})</small>
           </div>
           <div class="bubble">
@@ -102,7 +117,7 @@
       } else {
         div.innerHTML = `
           <div class="meta">
-            <b>${msg.from === "client" ? "Client" : "Server"}</b> 
+            <b>${msg.from === "client" ? "Client" : "Server"}</b>
             <small>(${msg.algorithm})</small>
           </div>
           <div class="bubble">
@@ -117,11 +132,7 @@
     }
 
     socket.on("connect", () => console.log("SocketIO bağlantısı aktif"));
-
-    socket.on("incoming_new", (msg) => {
-      addMessage(msg);
-    });
-
+    socket.on("incoming_new", (msg) => addMessage(msg));
     socket.on("incoming_cleared", () => {
       document.getElementById("chatBox").innerHTML = "";
     });
@@ -145,11 +156,43 @@
       }
     };
 
+    document.getElementById("rsaSetupBtn").onclick = async () => {
+      const serverHttp = document.getElementById("serverHttp").value.trim();
+      const aesPassword = document.getElementById("aesSessionPass").value.trim();
+      const rsaText = document.getElementById("rsaStatusText");
+
+      if (!serverHttp || !aesPassword) {
+        rsaReady = false;
+        rsaText.textContent = "Hata: Server HTTP ve AES Şifre boş olamaz!";
+        rsaText.style.color = "red";
+        return;
+      }
+
+      const form = new FormData();
+      form.append("server_http", serverHttp);
+      form.append("aes_password", aesPassword);
+
+      const res = await fetch("/rsa/setup", { method: "POST", body: form });
+      const data = await res.json();
+
+      if (data.success) {
+        rsaReady = true;
+        rsaText.textContent = "RSA kuruldu. AES oturum anahtarı hazır.";
+        rsaText.style.color = "green";
+      } else {
+        rsaReady = false;
+        rsaText.textContent = "Hata: " + (data.error || "RSA setup başarısız");
+        rsaText.style.color = "red";
+      }
+    };
+
     const algoSelect = document.getElementById("algorithmSelect");
     const keyField = document.getElementById("keyField");
     const keyLabel = document.getElementById("keyLabel");
+
     algoSelect.addEventListener("change", () => {
       const algo = algoSelect.value;
+
       if (algo === "caesar") {
         keyField.style.display = "block";
         keyLabel.textContent = "Anahtar (örn: 3)";
@@ -171,25 +214,18 @@
       } else if (algo === "columnar") {
         keyField.style.display = "block";
         keyLabel.textContent = "Anahtar kelime (örn: TRUVA)";
-      }
-      else if (algo === "hill") {
-      keyField.style.display = "block";
-      keyLabel.textContent = "Hill anahtarı (4 sayı, örn: 3 3 2 5)";
-    } else if (algo === "des") {
-  keyField.style.display = "block";
-  keyLabel.textContent = "DES Parolası (örn: despass1)";
-} 
- else if (algo === "des_lib") {
-  keyField.style.display = "block";
-  keyLabel.textContent = "DES Parolası (örn: despass1)";
-}
-else if (algo === "aes" || algo === "aes_lib") {
-  keyField.style.display = "block";
-  keyLabel.textContent = "AES Anahtarı (16 byte/parola, örn: aespass123)";
-}
-
-else 
-{
+      } else if (algo === "hill") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "Hill anahtarı (4 sayı, örn: 3 3 2 5)";
+      } else if (algo === "des" || algo === "des_lib") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "DES Parolası (örn: despass1)";
+      } else if (algo === "aes" || algo === "aes_lib") {
+        keyField.style.display = "block";
+        keyLabel.textContent = "AES Anahtarı (16 byte/parola, örn: aespass123)";
+      } else if (algo === "aes_session") {
+        keyField.style.display = "none";
+      } else {
         keyField.style.display = "none";
       }
     });
@@ -202,12 +238,18 @@ else
       const key = document.getElementById("keyInput").value.trim();
 
       if (!ip || !port || !msg) return alert("Tüm alanları doldurun!");
+      if (!algo) return alert("Algoritma seçin!");
+
+      if (algo === "aes_session" && !rsaReady) {
+        return alert("Önce RSA Kur ile AES oturum anahtarını kurmalısın.");
+      }
+
       const form = new FormData();
       form.append("ip", ip);
       form.append("port", port);
       form.append("message", msg);
       form.append("algorithm", algo);
-      if (key) form.append("key", key);
+      if (key && algo !== "aes_session") form.append("key", key);
 
       const res = await fetch("/send_message", { method: "POST", body: form });
       const data = await res.json();
