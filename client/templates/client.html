@@ -49,7 +49,9 @@
           <option value="polybius">Polybius Cipher</option>
           <option value="pigpen">Pigpen Cipher</option>
           <option value="hill">Hill Cipher</option>
-          <option value="des">DES Kütüphanesiz</option>
+          <option value="des">DES (Kütüphanesiz)</option>
+          <option value="des_lib">DES (Kütüphaneli)</option>
+
 
         </select>
       </div>
@@ -175,7 +177,13 @@
     } else if (algo === "des") {
   keyField.style.display = "block";
   keyLabel.textContent = "DES Parolası (örn: despass1)";
-} else {
+} 
+ else if (algo === "des_lib") {
+  keyField.style.display = "block";
+  keyLabel.textContent = "DES Parolası (örn: despass1)";
+}
+else 
+{
         keyField.style.display = "none";
       }
     });

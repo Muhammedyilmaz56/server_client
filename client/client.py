@@ -79,6 +79,10 @@ def decrypt_message(algorithm, text, key=None):
         elif algorithm == "des":
             key = key if key else "despass1"
             return des_decrypt_message(text, key)
+        elif algorithm == "des_lib":
+            key = key if key else "despass1"
+            return des_decrypt_message_lib(text, key)
+
 
         else:
             return text
@@ -211,6 +215,10 @@ def send_message(ip, port, message, algorithm="caesar", key=None):
         elif algorithm == "des":
             key = key if key else "despass1"
             encrypted = des_encrypt_message(message, key)
+        elif algorithm == "des_lib":
+            key = key if key else "despass1"
+            encrypted = des_encrypt_message_lib(message, key)
+    
 
         else:
             encrypted = message
