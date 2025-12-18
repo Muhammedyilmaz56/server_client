@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Client Panel</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+<div class="container">
+  <h1>Client Panel (KDC → Server → Chat)</h1>
+
+  <div class="card">
+    <h3>Ayarlar (IP/Port sabit değil)</h3>
+    <div class="row">
+      <div class="field">
+        <label>KDC IP</label>
+        <input id="kdcHost" value="{{ state.kdc_host }}" placeholder="örn: 127.0.0.1" />
+      </div>
+      <div class="field">
+        <label>KDC Port</label>
+        <input id="kdcPort" type="number" value="{{ state.kdc_port }}" placeholder="örn: 9000" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Server IP</label>
+        <input id="srvHost" value="{{ state.server_host }}" placeholder="örn: 127.0.0.1" />
+      </div>
+      <div class="field">
+        <label>Server Port</label>
+        <input id="srvPort" type="number" value="{{ state.server_port }}" placeholder="örn: 9001" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Client ID</label>
+        <input id="clientId" value="{{ state.client_id }}" />
+      </div>
+      <div class="field">
+        <label>Server ID</label>
+        <input id="serverId" value="{{ state.server_id }}" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Algoritma</label>
+      <select id="alg">
+        <option value="AES_GCM" {% if state.alg=="AES_GCM" %}selected{% endif %}>AES-GCM</option>
+        <option value="DES_CBC_HMAC" {% if state.alg=="DES_CBC_HMAC" %}selected{% endif %}>DES-CBC + HMAC</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="saveBtn">Kaydet</button>
+      <button class="btn btn-secondary" id="clearBtn">Chat Temizle</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Adım 1: KDC Session</h3>
+    <button class="btn" id="kdcBtn">KDC Session Al</button>
+  </div>
+
+  <div class="card">
+    <h3>Adım 2: Server Handshake</h3>
+    <button class="btn" id="connBtn">Server’a Bağlan (AUTH)</button>
+  </div>
+
+  <div class="card">
+    <h3>Adım 3: Mesaj Gönder</h3>
+    <div class="field">
+      <label>Mesaj</label>
+      <input id="msg" placeholder="Merhaba..." />
+    </div>
+    <button class="btn" id="sendBtn">Gönder</button>
+  </div>
+
+  <div class="card">
+    <h3>Sohbet</h3>
+    <div class="box" id="chatBox"></div>
+  </div>
+
+  <div class="card">
+    <h3>Log</h3>
+    <div class="box" id="logBox"></div>
+  </div>
+</div>
+
+<script>
+  const socket = io();
+  const chatBox = document.getElementById("chatBox");
+  const logBox = document.getElementById("logBox");
+
+  function addChat(m){
+    const d = document.createElement("div");
+    d.className = "item";
+    d.innerHTML = `
+      <div class="meta"><b>${m.from==="client"?"Client":"Server"}</b> <small>(${m.algorithm})</small></div>
+      <div><b>Şifreli(özet):</b> ${m.encrypted}</div>
+      <div><b>Çözülmüş:</b> ${m.decrypted}</div>
+    `;
+    chatBox.appendChild(d);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function addLog(t){
+    const d = document.createElement("div");
+    d.className = "item";
+    d.textContent = t;
+    logBox.appendChild(d);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  socket.on("incoming_new", addChat);
+  socket.on("incoming_cleared", () => chatBox.innerHTML = "");
+  socket.on("log", (m) => addLog(m.text));
+
+  async function post(url, obj){
+    const f = new FormData();
+    Object.keys(obj).forEach(k => f.append(k, obj[k]));
+    const r = await fetch(url, {method:"POST", body:f});
+    return r.json();
+  }
+
+  document.getElementById("saveBtn").onclick = async () => {
+    const res = await post("/save", {
+      kdc_host: kdcHost.value.trim(),
+      kdc_port: kdcPort.value.trim(),
+      server_host: srvHost.value.trim(),
+      server_port: srvPort.value.trim(),
+      client_id: clientId.value.trim(),
+      server_id: serverId.value.trim(),
+      alg: alg.value
+    });
+    if(!res.ok) alert("Kaydetme hatası");
+  };
+
+  document.getElementById("kdcBtn").onclick = async () => {
+    const r = await fetch("/kdc_session", {method:"POST"});
+    const d = await r.json();
+    if(!d.ok) alert("KDC hata: " + d.error);
+  };
+
+  document.getElementById("connBtn").onclick = async () => {
+    const r = await fetch("/connect_server", {method:"POST"});
+    const d = await r.json();
+    if(!d.ok) alert("Server connect hata: " + JSON.stringify(d.error));
+  };
+
+  document.getElementById("sendBtn").onclick = async () => {
+    const d = await post("/send", {message: msg.value.trim()});
+    if(!d.ok) alert("Send hata: " + d.error);
+    else msg.value = "";
+  };
+
+  document.getElementById("clearBtn").onclick = async () => {
+    await fetch("/clear", {method:"POST"});
+  };
+</script>
+</body>
+</html>

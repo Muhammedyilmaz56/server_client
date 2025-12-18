@@ -1,4 +1,3 @@
-
 import json
 import struct
 from typing import Any, Dict

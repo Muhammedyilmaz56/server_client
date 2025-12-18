@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Server Panel</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+<div class="container">
+  <h1>Server Panel (Dinleme + Log)</h1>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>Dinleme IP</label>
+        <input id="host" value="{{ state.host }}" placeholder="0.0.0.0 veya 192.168.x.x" />
+      </div>
+      <div class="field">
+        <label>Dinleme Port</label>
+        <input id="port" type="number" value="{{ state.port }}" />
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn" id="startBtn">Server Başlat</button>
+      <button class="btn btn-secondary" id="stopBtn">Server Durdur</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Log</h3>
+    <div class="box" id="logBox"></div>
+  </div>
+</div>
+
+<script>
+  const socket = io();
+  const logBox = document.getElementById("logBox");
+  function addLog(t){
+    const d = document.createElement("div");
+    d.className = "item";
+    d.textContent = t;
+    logBox.appendChild(d);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+  socket.on("log", (m) => addLog(m.text));
+
+  async function post(url, data){
+    const f = new FormData();
+    Object.keys(data).forEach(k => f.append(k, data[k]));
+    const r = await fetch(url, {method:"POST", body:f});
+    return r.json();
+  }
+
+  document.getElementById("startBtn").onclick = async () => {
+    const host = document.getElementById("host").value.trim();
+    const port = document.getElementById("port").value.trim();
+    const res = await post("/start", {host, port});
+    if(!res.ok) alert(res.error);
+  };
+
+  document.getElementById("stopBtn").onclick = async () => {
+    await fetch("/stop", {method:"POST"});
+  };
+</script>
+</body>
+</html>
