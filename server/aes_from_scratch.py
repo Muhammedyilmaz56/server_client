@@ -1,5 +1,5 @@
 
-
+import time
 from typing import List, Tuple
 
 
@@ -237,7 +237,8 @@ def aes_decrypt_block(block16: bytes, round_keys: List[bytes]) -> bytes:
 
 
 
-def aes_encrypt_message(message: str, password: str) -> str:
+def aes_encrypt_message(message: str, password: str) -> tuple:
+    start_time = time.time()
     key = password_to_key_bytes(password)
     round_keys = key_expansion_128(key)
 
@@ -248,9 +249,12 @@ def aes_encrypt_message(message: str, password: str) -> str:
         block = data[i:i+16]
         out += aes_encrypt_block(block, round_keys)
 
-    return out.hex().upper()
+    result = out.hex().upper()
+    elapsed = time.time() - start_time
+    return (result, elapsed)
 
-def aes_decrypt_message(cipher_hex: str, password: str) -> str:
+def aes_decrypt_message(cipher_hex: str, password: str) -> tuple:
+    start_time = time.time()
     key = password_to_key_bytes(password)
     round_keys = key_expansion_128(key)
 
@@ -264,4 +268,6 @@ def aes_decrypt_message(cipher_hex: str, password: str) -> str:
         out += aes_decrypt_block(ct[i:i+16], round_keys)
 
     pt = unpad_pkcs7(bytes(out), 16)
-    return pt.decode("utf-8", errors="ignore")
+    result = pt.decode("utf-8", errors="ignore")
+    elapsed = time.time() - start_time
+    return (result, elapsed)

@@ -1,3 +1,4 @@
+import time
 
 IP = [
     58, 50, 42, 34, 26, 18, 10,  2,
@@ -213,16 +214,19 @@ def password_to_key_hex(password: str) -> str:
         b = b[:8]
     return b.hex().upper()
 
-def des_encrypt_message(message: str, password: str) -> str:
+def des_encrypt_message(message: str, password: str) -> tuple:
+    start_time = time.time()
     key_hex = password_to_key_hex(password)
     data = pad(message.encode("utf-8"), 8)
     out = ""
     for i in range(0, len(data), 8):
         block_hex = data[i:i+8].hex().upper().zfill(16)
         out += des_encrypt_block(block_hex, key_hex)
-    return out
+    elapsed = time.time() - start_time
+    return (out, elapsed)
 
-def des_decrypt_message(cipher_hex: str, password: str) -> str:
+def des_decrypt_message(cipher_hex: str, password: str) -> tuple:
+    start_time = time.time()
     key_hex = password_to_key_hex(password)
     if len(cipher_hex) % 16 != 0:
         raise ValueError("Cipher uzunluğu 16'nın katı olmalı.")
@@ -231,4 +235,6 @@ def des_decrypt_message(cipher_hex: str, password: str) -> str:
         p_hex = des_decrypt_block(cipher_hex[i:i+16], key_hex)
         raw += bytes.fromhex(p_hex)
     raw = unpad(raw)
-    return raw.decode("utf-8", errors="ignore")
+    result = raw.decode("utf-8", errors="ignore")
+    elapsed = time.time() - start_time
+    return (result, elapsed)

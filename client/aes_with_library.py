@@ -1,3 +1,4 @@
+import time
 from Crypto.Cipher import AES
 
 def password_to_key_bytes(password: str) -> bytes:
@@ -18,14 +19,20 @@ def unpad(data: bytes) -> bytes:
         raise ValueError("Padding hatalı")
     return data[:-pad_len]
 
-def aes_encrypt_message_lib(message: str, password: str) -> str:
+def aes_encrypt_message_lib(message: str, password: str) -> tuple:
+    start_time = time.time()
     key = password_to_key_bytes(password)
     cipher = AES.new(key, AES.MODE_ECB)
     ct = cipher.encrypt(pad(message.encode("utf-8"), 16))
-    return ct.hex().upper()
+    result = ct.hex().upper()
+    elapsed = time.time() - start_time
+    return (result, elapsed)
 
-def aes_decrypt_message_lib(cipher_hex: str, password: str) -> str:
+def aes_decrypt_message_lib(cipher_hex: str, password: str) -> tuple:
+    start_time = time.time()
     key = password_to_key_bytes(password)
     cipher = AES.new(key, AES.MODE_ECB)
     pt = unpad(cipher.decrypt(bytes.fromhex(cipher_hex)))
-    return pt.decode("utf-8", errors="ignore")
+    result = pt.decode("utf-8", errors="ignore")
+    elapsed = time.time() - start_time
+    return (result, elapsed)

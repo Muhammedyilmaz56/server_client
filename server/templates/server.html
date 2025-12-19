@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
   <meta charset="UTF-8">
   <title>KriptoServer</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
+
 <body>
   <div class="container">
     <h1 class="title">Kriptoloji Sunucu Paneli</h1>
@@ -81,7 +83,7 @@
     const socket = io();
     const toastBox = document.getElementById("toast");
 
-    function showToast(text, type="success") {
+    function showToast(text, type = "success") {
       toastBox.textContent = text;
       toastBox.className = `toast ${type} show`;
       setTimeout(() => toastBox.classList.remove("show"), 3000);
@@ -108,6 +110,7 @@
       else div.classList.add("from-client");
 
       if (m.algorithm === "pigpen") {
+        const timeInfo = m.encrypt_time ? `<br><b>Şifreleme Süresi:</b> ${m.encrypt_time} sn` : (m.decrypt_time ? `<br><b>Çözme Süresi:</b> ${m.decrypt_time} sn` : '');
         div.innerHTML = `
           <div class="meta">
             <b>${m.direction}</b>
@@ -116,10 +119,11 @@
           <div class="bubble">
             <p><b>Şifreli:</b></p>
             <div>${m.encrypted.split('|').filter(p => p && p.trim() !== "").map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
-            <p><b>Çözülmüş:</b> ${m.decrypted}</p>
+            <p><b>Çözülmüş:</b> ${m.decrypted}${timeInfo}</p>
           </div>
         `;
       } else {
+        const timeInfo = m.encrypt_time ? `<p><b>⏱ Şifreleme Süresi:</b> ${m.encrypt_time} sn</p>` : (m.decrypt_time ? `<p><b>⏱ Çözme Süresi:</b> ${m.decrypt_time} sn</p>` : '');
         div.innerHTML = `
           <div class="meta">
             <b>${m.direction}</b>
@@ -128,6 +132,7 @@
           <div class="bubble">
             <p><b>Şifreli:</b> ${m.encrypted}</p>
             <p><b>Çözülmüş:</b> ${m.decrypted}</p>
+            ${timeInfo}
           </div>
         `;
       }
@@ -246,4 +251,5 @@
     };
   </script>
 </body>
+
 </html>

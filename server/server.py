@@ -37,39 +37,39 @@ def decrypt_message(algorithm, text, key=None):
     try:
         if algorithm == "caesar":
             shift = int(key) if key else 3
-            return caesar_decrypt(text, shift)
+            return (caesar_decrypt(text, shift), 0.0)
         elif algorithm == "vigenere":
             key = key if key else "anahtar"
-            return vigenere_decrypt(text, key)
+            return (vigenere_decrypt(text, key), 0.0)
         elif algorithm == "substitution":
             key_map = {chr(97 + i): chr(97 + ((i + 5) % 26)) for i in range(26)}
-            return substitution_decrypt(text, key_map)
+            return (substitution_decrypt(text, key_map), 0.0)
         elif algorithm == "affine":
             if not key or "," not in key:
-                return "Hatalı affine anahtarı"
+                return ("Hatalı affine anahtarı", 0.0)
             a, b = map(int, key.split(","))
             if math.gcd(a, 26) != 1:
-                return f"a={a} 26 ile aralarında asal değil!"
-            return affine_decrypt(text, a, b)
+                return (f"a={a} 26 ile aralarında asal değil!", 0.0)
+            return (affine_decrypt(text, a, b), 0.0)
         elif algorithm == "playfair":
             key = key if key else "monarchy"
-            return playfair_decrypt(text, key)
+            return (playfair_decrypt(text, key), 0.0)
         elif algorithm == "railfence":
             key = int(key) if key else 2
-            return rail_fence_decrypt(text, key)
+            return (rail_fence_decrypt(text, key), 0.0)
         elif algorithm == "route":
             cols = int(key) if key else 5
-            return route_decrypt(text, cols)
+            return (route_decrypt(text, cols), 0.0)
         elif algorithm == "columnar":
             key = key if key else "TRUVA"
-            return columnar_decrypt(text, key)
+            return (columnar_decrypt(text, key), 0.0)
         elif algorithm == "polybius":
-            return polybius_decrypt(text)
+            return (polybius_decrypt(text), 0.0)
         elif algorithm == "pigpen":
-            return pigpen_decrypt(text)
+            return (pigpen_decrypt(text), 0.0)
         elif algorithm == "hill":
             key = key if key else "3 3 2 5"
-            return hill_decrypt(text, key)
+            return (hill_decrypt(text, key), 0.0)
         elif algorithm == "des":
             key = key if key else "despass1"
             return des_decrypt_message(text, key)
@@ -84,12 +84,12 @@ def decrypt_message(algorithm, text, key=None):
             return aes_decrypt_message_lib(text, key)
         elif algorithm == "aes_session":
             if SESSION_AES_KEY is None:
-                return "Hata: RSA ile AES anahtarı kurulmadı (SESSION_AES_KEY boş)"
+                return ("Hata: RSA ile AES anahtarı kurulmadı (SESSION_AES_KEY boş)", 0.0)
             return aes_decrypt_message(text, SESSION_AES_KEY.decode("utf-8", errors="ignore"))
         else:
-            return text
+            return (text, 0.0)
     except Exception as e:
-        return f"Hata: {e}"
+        return (f"Hata: {e}", 0.0)
 
 def start_socket_server(ip, port):
     global server_socket, server_running
@@ -126,13 +126,14 @@ def start_socket_server(ip, port):
                         if key_used == "":
                             key_used = None
 
-                    decrypted_text = decrypt_message(algo_label, cipher_text, key_used)
+                    decrypted_text, decrypt_time = decrypt_message(algo_label, cipher_text, key_used)
 
                     new_message = {
                         "direction": "Client → Server",
                         "algorithm": algo_label,
                         "encrypted": cipher_text,
-                        "decrypted": decrypted_text
+                        "decrypted": decrypted_text,
+                        "decrypt_time": f"{decrypt_time:.6f}" if decrypt_time > 0 else None
                     }
                     messages.append(new_message)
                     socketio.emit("new_message", new_message)
@@ -159,6 +160,7 @@ def start_socket_server(ip, port):
 
 def send_to_client(ip, port, message, algorithm="caesar", key=None):
     try:
+        encrypt_time = 0.0
         if algorithm == "caesar":
             shift = int(key) if key else 3
             encrypted = caesar_encrypt(message, shift)
@@ -196,20 +198,20 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
             encrypted = hill_encrypt(message, key)
         elif algorithm == "des":
             key = key if key else "despass1"
-            encrypted = des_encrypt_message(message, key)
+            encrypted, encrypt_time = des_encrypt_message(message, key)
         elif algorithm == "des_lib":
             key = key if key else "despass1"
-            encrypted = des_encrypt_message_lib(message, key)
+            encrypted, encrypt_time = des_encrypt_message_lib(message, key)
         elif algorithm == "aes":
             key = key if key else "aespass123"
-            encrypted = aes_encrypt_message(message, key)
+            encrypted, encrypt_time = aes_encrypt_message(message, key)
         elif algorithm == "aes_lib":
             key = key if key else "aespass123"
-            encrypted = aes_encrypt_message_lib(message, key)
+            encrypted, encrypt_time = aes_encrypt_message_lib(message, key)
         elif algorithm == "aes_session":
             if SESSION_AES_KEY is None:
                 return False, "Hata: Önce RSA ile AES anahtarı kurulmalı."
-            encrypted = aes_encrypt_message(message, SESSION_AES_KEY.decode("utf-8", errors="ignore"))
+            encrypted, encrypt_time = aes_encrypt_message(message, SESSION_AES_KEY.decode("utf-8", errors="ignore"))
         else:
             encrypted = message
 
@@ -223,7 +225,8 @@ def send_to_client(ip, port, message, algorithm="caesar", key=None):
             "direction": "Server → Client",
             "algorithm": algorithm,
             "encrypted": encrypted,
-            "decrypted": message
+            "decrypted": message,
+            "encrypt_time": f"{encrypt_time:.6f}" if encrypt_time > 0 else None
         }
         messages.append(new_message)
         socketio.emit("new_message", new_message)

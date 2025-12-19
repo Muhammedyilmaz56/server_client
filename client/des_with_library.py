@@ -1,4 +1,4 @@
-
+import time
 from Crypto.Cipher import DES
 from Crypto.Util.Padding import pad, unpad
 
@@ -10,16 +10,22 @@ def password_to_key_bytes(password: str) -> bytes:
         b = b[:8]
     return b
 
-def des_encrypt_message_lib(message: str, password: str) -> str:
+def des_encrypt_message_lib(message: str, password: str) -> tuple:
+    start_time = time.time()
     key = password_to_key_bytes(password)
     cipher = DES.new(key, DES.MODE_ECB)
     data = pad(message.encode("utf-8"), 8)
     ct = cipher.encrypt(data)
-    return ct.hex().upper()
+    result = ct.hex().upper()
+    elapsed = time.time() - start_time
+    return (result, elapsed)
 
-def des_decrypt_message_lib(cipher_hex: str, password: str) -> str:
+def des_decrypt_message_lib(cipher_hex: str, password: str) -> tuple:
+    start_time = time.time()
     key = password_to_key_bytes(password)
     cipher = DES.new(key, DES.MODE_ECB)
     ct = bytes.fromhex(cipher_hex)
     pt = unpad(cipher.decrypt(ct), 8)
-    return pt.decode("utf-8", errors="ignore")
+    result = pt.decode("utf-8", errors="ignore")
+    elapsed = time.time() - start_time
+    return (result, elapsed)

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
   <meta charset="UTF-8">
   <title>KriptoClient</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
+
 <body>
   <div class="container">
     <h1>Kriptoloji Client Paneli</h1>
@@ -103,6 +105,7 @@
       else div.classList.add("from-server");
 
       if (msg.algorithm === "pigpen") {
+        const timeInfo = msg.encrypt_time ? `<br><b>Şifreleme Süresi:</b> ${msg.encrypt_time} sn` : (msg.decrypt_time ? `<br><b>Çözme Süresi:</b> ${msg.decrypt_time} sn` : '');
         div.innerHTML = `
           <div class="meta">
             <b>${msg.from === "client" ? "Client" : "Server"}</b>
@@ -111,10 +114,11 @@
           <div class="bubble">
             <p><b>Şifreli:</b></p>
             <div>${msg.encrypted.split('|').filter(p => p && p.trim() !== "").map(p => p ? `<img src="${p}" width="40">` : '').join('')}</div>
-            <p><b>Çözülmüş:</b> ${msg.decrypted}</p>
+            <p><b>Çözülmüş:</b> ${msg.decrypted}${timeInfo}</p>
           </div>
         `;
       } else {
+        const timeInfo = msg.encrypt_time ? `<p><b>⏱ Şifreleme Süresi:</b> ${msg.encrypt_time} sn</p>` : (msg.decrypt_time ? `<p><b>⏱ Çözme Süresi:</b> ${msg.decrypt_time} sn</p>` : '');
         div.innerHTML = `
           <div class="meta">
             <b>${msg.from === "client" ? "Client" : "Server"}</b>
@@ -123,6 +127,7 @@
           <div class="bubble">
             <p><b>Şifreli:</b> ${msg.encrypted}</p>
             <p><b>Çözülmüş:</b> ${msg.decrypted}</p>
+            ${timeInfo}
           </div>
         `;
       }
@@ -263,4 +268,5 @@
     };
   </script>
 </body>
+
 </html>
